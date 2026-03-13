@@ -25,9 +25,16 @@ Important scope note: backend, database, and ML inference are intentionally not 
 - Expo SDK 55
 - React Native 0.83
 - React 19
+- React Native Web
 - TypeScript
 - React Navigation (bottom tabs + native stack)
 - Jest + React Native Testing Library
+
+## Prerequisites
+
+- Node.js `>= 20.19.4` (recommended: `20.19.4`)
+- npm `>= 10`
+- Expo CLI via `npx` (no global install required)
 
 ## Mobile Project Structure
 
@@ -61,15 +68,17 @@ From `mobile/package.json`:
 - `expo-font` `~55.0.4`
 - `expo-status-bar` `~55.0.4`
 - `react` `19.2.0`
+- `react-dom` `19.2.0`
 - `react-native` `0.83.2`
 - `react-native-gesture-handler` `~2.30.0`
 - `react-native-safe-area-context` `~5.6.2`
 - `react-native-screens` `~4.23.0`
+- `react-native-web` `^0.21.0`
 
 ### Dev dependencies
 - `@testing-library/jest-native` `^5.4.3`
 - `@testing-library/react-native` `^13.3.3`
-- `@types/jest` `^30.0.0`
+- `@types/jest` `29.5.14`
 - `@types/react` `~19.2.2`
 - `jest` `^29.7.0`
 - `jest-expo` `^55.0.9`
@@ -91,12 +100,30 @@ Useful scripts:
 - `npm run test`
 - `npm run test:watch`
 
+Dependency compatibility check:
+
+```bash
+cd mobile
+npx expo install --check
+```
+
 Type-check:
 
 ```bash
 cd mobile
 npx tsc --noEmit
 ```
+
+## Quick Troubleshooting
+
+1. If Expo warns about incompatible packages, run:
+   - `cd mobile`
+   - `npx expo install --check`
+2. If you see missing web dependencies (`react-dom` / `react-native-web`), run:
+   - `cd mobile`
+   - `npx expo install react-dom react-native-web`
+3. If you see Node engine warnings from React Native packages:
+   - ensure `node -v` is at least `20.19.4`
 
 ## Backend Developer Handoff
 

@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from "react-native";
 
-import { fontFamily, theme } from "../constants/theme";
+import { fontFamily } from "../constants/theme";
+import type { AppTheme } from "../constants/theme";
+import { useAppTheme } from "../theme/AppThemeProvider";
 import type {
   CalculatorInput,
   Race,
@@ -17,6 +19,7 @@ import type {
   WeatherCondition,
 } from "../types/domain";
 import { clamp } from "../utils/format";
+import { SelectMenu } from "./SelectMenu";
 import { SectionHeader } from "./SectionHeader";
 import { YearChipSelector } from "./YearChipSelector";
 
@@ -37,9 +40,13 @@ export const PredictionForm = ({
   submitting = false,
   onSubmit,
 }: PredictionFormProps) => {
+  const { theme } = useAppTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { width } = useWindowDimensions();
+  const isCompactWidth = width < 380;
   const [selectedSeason, setSelectedSeason] = useState<number>(seasons[0]?.year ?? 0);
-  const [selectedRaceId, setSelectedRaceId] = useState<string>(races[0]?.id ?? "");
-  const [selectedRacerId, setSelectedRacerId] = useState<string>(racers[0]?.id ?? "");
+  const [selectedRaceId, setSelectedRaceId] = useState<string>("");
+  const [selectedRacerId, setSelectedRacerId] = useState<string>("");
   const [gridPosition, setGridPosition] = useState<string>("8");
   const [recentFormScore, setRecentFormScore] = useState<string>("72");
   const [weatherCondition, setWeatherCondition] = useState<WeatherCondition>("Dry");
@@ -57,14 +64,14 @@ export const PredictionForm = ({
   );
 
   useEffect(() => {
-    if (!racesForSeason.find((race) => race.id === selectedRaceId)) {
-      setSelectedRaceId(racesForSeason[0]?.id ?? "");
+    if (selectedRaceId && !racesForSeason.find((race) => race.id === selectedRaceId)) {
+      setSelectedRaceId("");
     }
   }, [racesForSeason, selectedRaceId]);
 
   useEffect(() => {
-    if (!racers.find((racer) => racer.id === selectedRacerId)) {
-      setSelectedRacerId(racers[0]?.id ?? "");
+    if (selectedRacerId && !racers.find((racer) => racer.id === selectedRacerId)) {
+      setSelectedRacerId("");
     }
   }, [racers, selectedRacerId]);
 
@@ -117,43 +124,39 @@ export const PredictionForm = ({
 
       <View style={styles.block}>
         <Text style={styles.label}>Race</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipList}>
-          {racesForSeason.map((race) => {
-            const selected = race.id === selectedRaceId;
-            return (
-              <Pressable
-                key={race.id}
-                style={[styles.chip, selected && styles.chipSelected]}
-                onPress={() => setSelectedRaceId(race.id)}
-                testID={`race-chip-${race.id}`}
-              >
-                <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{race.name}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        <SelectMenu
+          value={selectedRaceId}
+          placeholder="Select race"
+          title="Select race"
+          options={racesForSeason.map((race) => ({
+            label: `R${race.round} - ${race.name}`,
+            value: race.id,
+            helper: `${race.country} - ${race.circuit}`,
+          }))}
+          onChange={setSelectedRaceId}
+          triggerTestID="race-select-trigger"
+          optionTestIDPrefix="race-select-option-"
+        />
       </View>
 
       <View style={styles.block}>
         <Text style={styles.label}>Racer</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipList}>
-          {racers.map((racer) => {
-            const selected = racer.id === selectedRacerId;
-            return (
-              <Pressable
-                key={racer.id}
-                style={[styles.chip, selected && styles.chipSelected]}
-                onPress={() => setSelectedRacerId(racer.id)}
-                testID={`racer-chip-${racer.id}`}
-              >
-                <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{racer.name}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        <SelectMenu
+          value={selectedRacerId}
+          placeholder="Select racer"
+          title="Select racer"
+          options={racers.map((racer) => ({
+            label: racer.name,
+            value: racer.id,
+            helper: racer.team,
+          }))}
+          onChange={setSelectedRacerId}
+          triggerTestID="racer-select-trigger"
+          optionTestIDPrefix="racer-select-option-"
+        />
       </View>
 
-      <View style={styles.inputRow}>
+      <View style={[styles.inputRow, isCompactWidth && styles.inputRowCompact]}>
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Grid Position</Text>
           <TextInput
@@ -164,6 +167,7 @@ export const PredictionForm = ({
             testID="input-grid-position"
             maxLength={2}
             placeholder="1 - 20"
+            placeholderTextColor={theme.colors.textSecondary}
           />
         </View>
         <View style={styles.inputGroup}>
@@ -176,13 +180,14 @@ export const PredictionForm = ({
             testID="input-form-score"
             maxLength={3}
             placeholder="0 - 100"
+            placeholderTextColor={theme.colors.textSecondary}
           />
         </View>
       </View>
 
       <View style={styles.block}>
         <Text style={styles.label}>Weather</Text>
-        <View style={styles.weatherRow}>
+        <View style={[styles.weatherRow, isCompactWidth && styles.weatherRowCompact]}>
           {weatherOptions.map((option) => {
             const selected = option === weatherCondition;
             return (
@@ -217,112 +222,100 @@ export const PredictionForm = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: theme.spacing.md,
-    gap: theme.spacing.md,
-    ...theme.shadows.card,
-  },
-  block: {
-    gap: theme.spacing.xs,
-  },
-  label: {
-    fontFamily: fontFamily.bodySemi,
-    color: theme.colors.textPrimary,
-    fontSize: theme.typeScale.bodySmall,
-  },
-  chipList: {
-    gap: theme.spacing.xs,
-  },
-  chip: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.pill,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    backgroundColor: theme.colors.surfaceMuted,
-  },
-  chipSelected: {
-    borderColor: theme.colors.accent,
-    backgroundColor: theme.colors.accentSoft,
-  },
-  chipText: {
-    fontFamily: fontFamily.bodyRegular,
-    color: theme.colors.textSecondary,
-    fontSize: theme.typeScale.bodySmall,
-  },
-  chipTextSelected: {
-    fontFamily: fontFamily.bodySemi,
-    color: theme.colors.accent,
-  },
-  inputRow: {
-    flexDirection: "row",
-    gap: theme.spacing.sm,
-  },
-  inputGroup: {
-    flex: 1,
-    gap: theme.spacing.xs,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.surfaceMuted,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs,
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: theme.typeScale.body,
-    color: theme.colors.textPrimary,
-  },
-  weatherRow: {
-    flexDirection: "row",
-    gap: theme.spacing.sm,
-  },
-  weatherChip: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.pill,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    backgroundColor: theme.colors.surfaceMuted,
-  },
-  weatherChipSelected: {
-    borderColor: theme.colors.accent,
-    backgroundColor: theme.colors.accentSoft,
-  },
-  weatherText: {
-    fontFamily: fontFamily.bodyRegular,
-    color: theme.colors.textSecondary,
-    fontSize: theme.typeScale.bodySmall,
-  },
-  weatherTextSelected: {
-    fontFamily: fontFamily.bodySemi,
-    color: theme.colors.accent,
-  },
-  validation: {
-    fontFamily: fontFamily.bodySemi,
-    color: theme.colors.error,
-    fontSize: theme.typeScale.bodySmall,
-  },
-  submitButton: {
-    backgroundColor: theme.colors.accent,
-    borderRadius: theme.radius.md,
-    paddingVertical: theme.spacing.sm,
-    alignItems: "center",
-  },
-  submitButtonDisabled: {
-    opacity: 0.7,
-  },
-  submitPressed: {
-    opacity: 0.9,
-  },
-  submitLabel: {
-    fontFamily: fontFamily.bodyBold,
-    color: theme.colors.surface,
-    fontSize: theme.typeScale.body,
-  },
-});
+const createStyles = (theme: AppTheme) =>
+  StyleSheet.create({
+    container: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.radius.lg,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      padding: theme.spacing.md,
+      gap: theme.spacing.md,
+      ...theme.shadows.card,
+    },
+    block: {
+      gap: theme.spacing.xs,
+    },
+    label: {
+      fontFamily: fontFamily.bodySemi,
+      color: theme.colors.textPrimary,
+      fontSize: theme.typeScale.bodySmall,
+    },
+    inputRow: {
+      flexDirection: "row",
+      gap: theme.spacing.sm,
+    },
+    inputRowCompact: {
+      flexDirection: "column",
+    },
+    inputGroup: {
+      flex: 1,
+      gap: theme.spacing.xs,
+    },
+    input: {
+      minHeight: 44,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.radius.md,
+      backgroundColor: theme.colors.surfaceMuted,
+      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: theme.spacing.xs,
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: theme.typeScale.body,
+      color: theme.colors.textPrimary,
+    },
+    weatherRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: theme.spacing.sm,
+    },
+    weatherRowCompact: {
+      gap: theme.spacing.xs,
+    },
+    weatherChip: {
+      minHeight: 44,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.radius.pill,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.xs,
+      backgroundColor: theme.colors.surfaceMuted,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    weatherChipSelected: {
+      borderColor: theme.colors.accent,
+      backgroundColor: theme.colors.accentSoft,
+    },
+    weatherText: {
+      fontFamily: fontFamily.bodyRegular,
+      color: theme.colors.textSecondary,
+      fontSize: theme.typeScale.bodySmall,
+    },
+    weatherTextSelected: {
+      fontFamily: fontFamily.bodySemi,
+      color: theme.colors.accent,
+    },
+    validation: {
+      fontFamily: fontFamily.bodySemi,
+      color: theme.colors.error,
+      fontSize: theme.typeScale.bodySmall,
+    },
+    submitButton: {
+      backgroundColor: theme.colors.accent,
+      borderRadius: theme.radius.md,
+      paddingVertical: theme.spacing.sm,
+      alignItems: "center",
+    },
+    submitButtonDisabled: {
+      opacity: 0.7,
+    },
+    submitPressed: {
+      opacity: 0.9,
+    },
+    submitLabel: {
+      fontFamily: fontFamily.bodyBold,
+      color: theme.colors.surface,
+      fontSize: theme.typeScale.body,
+    },
+  });

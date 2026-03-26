@@ -1,5 +1,6 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { EmptyState } from "../components/EmptyState";
 import { ErrorState } from "../components/ErrorState";
@@ -9,9 +10,12 @@ import { PredictionTop10List } from "../components/PredictionTop10List";
 import { ScreenFadeIn } from "../components/ScreenFadeIn";
 import { SectionHeader } from "../components/SectionHeader";
 import { StatCard } from "../components/StatCard";
-import { fontFamily, theme } from "../constants/theme";
+import { APP_TAB_BAR_HEIGHT } from "../constants/layout";
+import { fontFamily } from "../constants/theme";
+import type { AppTheme } from "../constants/theme";
 import { useAsyncResource } from "../hooks/useAsyncResource";
 import { predictionService } from "../services/mockApi";
+import { useAppTheme } from "../theme/AppThemeProvider";
 import type { RaceDetailsParams } from "../types/navigation";
 import { formatDate } from "../utils/format";
 
@@ -28,7 +32,20 @@ type RaceDetailPayload = {
 };
 
 export const RaceDetailsScreen = ({ route, navigation }: RaceDetailsScreenProps) => {
+  const { theme } = useAppTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const { raceId } = route.params;
+  const tabBarHeight = APP_TAB_BAR_HEIGHT;
+  const insets = useSafeAreaInsets();
+
+  const contentInsets = useMemo(
+    () => ({
+      paddingLeft: theme.spacing.md + insets.left,
+      paddingRight: theme.spacing.md + insets.right,
+      paddingBottom: tabBarHeight + insets.bottom + theme.spacing.lg,
+    }),
+    [insets.bottom, insets.left, insets.right, tabBarHeight]
+  );
 
   const fetchRaceDetailPayload = useCallback(async (): Promise<RaceDetailPayload> => {
     const [details, top10] = await Promise.all([
@@ -46,7 +63,7 @@ export const RaceDetailsScreen = ({ route, navigation }: RaceDetailsScreenProps)
 
   if (resource.status === "loading" || resource.status === "idle") {
     return (
-      <View style={styles.stateContainer}>
+      <View style={[styles.stateContainer, contentInsets]}>
         <LoadingState label="Preparing race board..." />
       </View>
     );
@@ -54,7 +71,7 @@ export const RaceDetailsScreen = ({ route, navigation }: RaceDetailsScreenProps)
 
   if (resource.status === "error") {
     return (
-      <View style={styles.stateContainer}>
+      <View style={[styles.stateContainer, contentInsets]}>
         <ErrorState message={resource.error ?? "Race detail load failed."} onRetry={resource.refresh} />
       </View>
     );
@@ -62,7 +79,7 @@ export const RaceDetailsScreen = ({ route, navigation }: RaceDetailsScreenProps)
 
   if (resource.status === "empty" || !resource.data) {
     return (
-      <View style={styles.stateContainer}>
+      <View style={[styles.stateContainer, contentInsets]}>
         <EmptyState
           title="No Top-10 entries"
           message="Prediction rows are empty for this race in the current mock scenario."
@@ -80,16 +97,16 @@ export const RaceDetailsScreen = ({ route, navigation }: RaceDetailsScreenProps)
     <ScreenFadeIn>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, contentInsets]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.hero}>
           <Text style={styles.heroTitle}>{race.name}</Text>
           <Text style={styles.heroSubTitle}>
-            Season {race.season} · Round {race.round} · {formatDate(race.date)}
+            Season {race.season} - Round {race.round} - {formatDate(race.date)}
           </Text>
           <Text style={styles.heroMeta}>
-            {race.circuit} • {race.country}
+            {race.circuit} - {race.country}
           </Text>
         </View>
 
@@ -129,65 +146,66 @@ export const RaceDetailsScreen = ({ route, navigation }: RaceDetailsScreenProps)
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  content: {
-    padding: theme.spacing.md,
-    gap: theme.spacing.md,
-    paddingBottom: 120,
-  },
-  stateContainer: {
-    flex: 1,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.background,
-  },
-  hero: {
-    borderRadius: theme.radius.lg,
-    backgroundColor: "#1C2335",
-    padding: theme.spacing.lg,
-    gap: theme.spacing.xxs,
-  },
-  heroTitle: {
-    fontFamily: fontFamily.headingBold,
-    color: theme.colors.surface,
-    fontSize: theme.typeScale.h1,
-    lineHeight: 34,
-  },
-  heroSubTitle: {
-    fontFamily: fontFamily.bodySemi,
-    color: "#F2B8C1",
-    fontSize: theme.typeScale.bodySmall,
-  },
-  heroMeta: {
-    fontFamily: fontFamily.bodyRegular,
-    color: "#D8DFE8",
-    fontSize: theme.typeScale.body,
-  },
-  statsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: theme.spacing.sm,
-  },
-  noteRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: theme.spacing.xs,
-  },
-  noteDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 8,
-    backgroundColor: theme.colors.accent,
-    marginTop: 6,
-  },
-  noteText: {
-    flex: 1,
-    fontFamily: fontFamily.bodyRegular,
-    color: theme.colors.textSecondary,
-    fontSize: theme.typeScale.body,
-    lineHeight: 22,
-  },
-});
+const createStyles = (theme: AppTheme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    content: {
+      padding: theme.spacing.md,
+      gap: theme.spacing.md,
+      paddingBottom: theme.spacing.lg,
+    },
+    stateContainer: {
+      flex: 1,
+      padding: theme.spacing.md,
+      backgroundColor: theme.colors.background,
+    },
+    hero: {
+      borderRadius: theme.radius.lg,
+      backgroundColor: theme.colors.raceHeroSurface,
+      padding: theme.spacing.lg,
+      gap: theme.spacing.xxs,
+    },
+    heroTitle: {
+      fontFamily: fontFamily.headingBold,
+      color: theme.colors.surface,
+      fontSize: theme.typeScale.h1,
+      lineHeight: 34,
+    },
+    heroSubTitle: {
+      fontFamily: fontFamily.bodySemi,
+      color: theme.colors.raceHeroSubtitle,
+      fontSize: theme.typeScale.bodySmall,
+    },
+    heroMeta: {
+      fontFamily: fontFamily.bodyRegular,
+      color: theme.colors.raceHeroMeta,
+      fontSize: theme.typeScale.body,
+    },
+    statsRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: theme.spacing.sm,
+    },
+    noteRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: theme.spacing.xs,
+    },
+    noteDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 8,
+      backgroundColor: theme.colors.accent,
+      marginTop: 6,
+    },
+    noteText: {
+      flex: 1,
+      fontFamily: fontFamily.bodyRegular,
+      color: theme.colors.textSecondary,
+      fontSize: theme.typeScale.body,
+      lineHeight: 22,
+    },
+  });

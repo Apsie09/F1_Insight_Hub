@@ -15,6 +15,8 @@ export const useAsyncResource = <T>(
   const { immediate = true, dependencies = [], isEmpty } = options;
   const fetcherRef = useRef(fetcher);
   const isEmptyRef = useRef(isEmpty);
+  const requestIdRef = useRef(0);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
     fetcherRef.current = fetcher;
@@ -24,6 +26,13 @@ export const useAsyncResource = <T>(
     isEmptyRef.current = isEmpty;
   }, [isEmpty]);
 
+  useEffect(
+    () => () => {
+      mountedRef.current = false;
+    },
+    []
+  );
+
   const [state, setState] = useState<AsyncResourceState<T>>({
     status: immediate ? "loading" : "idle",
     data: null,
@@ -31,9 +40,14 @@ export const useAsyncResource = <T>(
   });
 
   const execute = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setState((prev) => ({ ...prev, status: "loading", error: null }));
     try {
       const value = await fetcherRef.current();
+      if (!mountedRef.current || requestId !== requestIdRef.current) {
+        return;
+      }
+
       const status = isEmptyRef.current?.(value) ? "empty" : "success";
       setState({
         status,
@@ -41,6 +55,10 @@ export const useAsyncResource = <T>(
         error: null,
       });
     } catch (err) {
+      if (!mountedRef.current || requestId !== requestIdRef.current) {
+        return;
+      }
+
       const message = err instanceof Error ? err.message : "Unexpected error";
       setState({
         status: "error",

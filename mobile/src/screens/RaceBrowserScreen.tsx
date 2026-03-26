@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { FlatList, StyleSheet, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { EmptyState } from "../components/EmptyState";
 import { ErrorState } from "../components/ErrorState";
@@ -9,15 +10,36 @@ import { RaceCard } from "../components/RaceCard";
 import { ScreenFadeIn } from "../components/ScreenFadeIn";
 import { SectionHeader } from "../components/SectionHeader";
 import { YearChipSelector } from "../components/YearChipSelector";
-import { fontFamily, theme } from "../constants/theme";
+import { APP_TAB_BAR_HEIGHT } from "../constants/layout";
+import type { AppTheme } from "../constants/theme";
 import { useAsyncResource } from "../hooks/useAsyncResource";
 import { predictionService } from "../services/mockApi";
+import { useAppTheme } from "../theme/AppThemeProvider";
 import type { BrowseStackParamList } from "../types/navigation";
 
 type RaceBrowserScreenProps = NativeStackScreenProps<BrowseStackParamList, "RaceBrowser">;
 
 export const RaceBrowserScreen = ({ navigation }: RaceBrowserScreenProps) => {
+  const { theme } = useAppTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [selectedYear, setSelectedYear] = useState<number>(0);
+  const tabBarHeight = APP_TAB_BAR_HEIGHT;
+  const insets = useSafeAreaInsets();
+
+  const contentInsets = useMemo(
+    () => ({
+      paddingLeft: theme.spacing.md + insets.left,
+      paddingRight: theme.spacing.md + insets.right,
+    }),
+    [insets.left, insets.right]
+  );
+
+  const listInsets = useMemo(
+    () => ({
+      paddingBottom: tabBarHeight + insets.bottom + theme.spacing.lg,
+    }),
+    [insets.bottom, tabBarHeight]
+  );
 
   const fetchSeasons = useCallback(() => predictionService.getSeasons(), []);
   const seasonsResource = useAsyncResource(fetchSeasons, {
@@ -78,13 +100,15 @@ export const RaceBrowserScreen = ({ navigation }: RaceBrowserScreenProps) => {
 
     return (
       <ScreenFadeIn>
-        <View style={styles.content}>
+        <View style={[styles.content, contentInsets]}>
           <SectionHeader title="Browse by year" subtitle="Tap a season to filter available race cards." />
-          <YearChipSelector
-            years={seasonsResource.data.map((season) => season.year)}
-            selectedYear={selectedYear}
-            onSelect={setSelectedYear}
-          />
+          <View style={styles.yearSelectorBlock}>
+            <YearChipSelector
+              years={seasonsResource.data.map((season) => season.year)}
+              selectedYear={selectedYear}
+              onSelect={setSelectedYear}
+            />
+          </View>
 
           <SectionHeader title={title} subtitle="Open a race to inspect Top-10 predictions and racer details." />
           {racesResource.status === "loading" || racesResource.status === "idle" ? (
@@ -103,9 +127,10 @@ export const RaceBrowserScreen = ({ navigation }: RaceBrowserScreenProps) => {
           ) : null}
           {racesResource.status === "success" && racesResource.data ? (
             <FlatList
+              style={styles.raceList}
               data={racesResource.data}
               keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.listContent}
+              contentContainerStyle={[styles.listContent, listInsets]}
               renderItem={({ item }) => (
                 <RaceCard
                   race={item}
@@ -129,24 +154,25 @@ export const RaceBrowserScreen = ({ navigation }: RaceBrowserScreenProps) => {
   return <View style={styles.container}>{renderBody()}</View>;
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: theme.spacing.md,
-    paddingTop: theme.spacing.md,
-    gap: theme.spacing.md,
-  },
-  listContent: {
-    paddingBottom: 100,
-  },
-  loadingLabel: {
-    fontFamily: fontFamily.bodyRegular,
-  },
-  infoText: {
-    fontFamily: fontFamily.bodyRegular,
-  },
-});
+const createStyles = (theme: AppTheme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    content: {
+      flex: 1,
+      paddingTop: theme.spacing.md,
+      gap: theme.spacing.md,
+    },
+    yearSelectorBlock: {
+      zIndex: 2,
+      marginBottom: theme.spacing.xs,
+    },
+    raceList: {
+      flex: 1,
+    },
+    listContent: {
+      paddingBottom: theme.spacing.lg,
+    },
+  });

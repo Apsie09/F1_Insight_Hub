@@ -7,6 +7,7 @@ import { RacerRowCard } from "../components/RacerRowCard";
 import { StatCard } from "../components/StatCard";
 import { races, top10PredictionsByRace } from "../data/mockFixtures";
 import { setEndpointScenario, setMockLatency } from "../services/mockApi";
+import { AppThemeProvider } from "../theme/AppThemeProvider";
 
 describe("State coverage", () => {
   it("shows loading state while service waits", () => {
@@ -19,7 +20,7 @@ describe("State coverage", () => {
     setEndpointScenario("races", "empty");
     render(<App />);
 
-    fireEvent.press(await screen.findByText("Browse"));
+    fireEvent.press(await screen.findByTestId("tab-browse"));
     expect(await screen.findByText("No races available")).toBeOnTheScreen();
   });
 
@@ -27,7 +28,7 @@ describe("State coverage", () => {
     setEndpointScenario("top10", "error");
     render(<App />);
 
-    fireEvent.press(await screen.findByText("Browse"));
+    fireEvent.press(await screen.findByTestId("tab-browse"));
     fireEvent.press(await screen.findByTestId("race-card-2025-bahrain"));
 
     expect(await screen.findByTestId("error-state")).toBeOnTheScreen();
@@ -38,7 +39,13 @@ describe("Component smoke snapshots", () => {
   it("renders RaceCard", () => {
     let tree: renderer.ReactTestRendererJSON | renderer.ReactTestRendererJSON[] | null = null;
     renderer.act(() => {
-      tree = renderer.create(<RaceCard race={races[0]} onPress={() => undefined} />).toJSON();
+      tree = renderer
+        .create(
+          <AppThemeProvider>
+            <RaceCard race={races[0]} onPress={() => undefined} />
+          </AppThemeProvider>
+        )
+        .toJSON();
     });
     expect(tree).toMatchSnapshot();
   });
@@ -48,7 +55,11 @@ describe("Component smoke snapshots", () => {
     let tree: renderer.ReactTestRendererJSON | renderer.ReactTestRendererJSON[] | null = null;
     renderer.act(() => {
       tree = renderer
-        .create(<RacerRowCard entry={entry} onPress={() => undefined} />)
+        .create(
+          <AppThemeProvider>
+            <RacerRowCard entry={entry} onPress={() => undefined} />
+          </AppThemeProvider>
+        )
         .toJSON();
     });
     expect(tree).toMatchSnapshot();
@@ -57,7 +68,13 @@ describe("Component smoke snapshots", () => {
   it("renders StatCard", () => {
     let tree: renderer.ReactTestRendererJSON | renderer.ReactTestRendererJSON[] | null = null;
     renderer.act(() => {
-      tree = renderer.create(<StatCard label="Wins" value={12} helper="Career total" />).toJSON();
+      tree = renderer
+        .create(
+          <AppThemeProvider>
+            <StatCard label="Wins" value={12} helper="Career total" />
+          </AppThemeProvider>
+        )
+        .toJSON();
     });
     expect(tree).toMatchSnapshot();
   });

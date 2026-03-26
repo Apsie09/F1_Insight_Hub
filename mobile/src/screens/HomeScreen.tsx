@@ -1,6 +1,7 @@
-import { useCallback } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useCallback, useMemo } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { EmptyState } from "../components/EmptyState";
 import { ErrorState } from "../components/ErrorState";
@@ -8,9 +9,12 @@ import { LoadingState } from "../components/LoadingState";
 import { RaceCard } from "../components/RaceCard";
 import { ScreenFadeIn } from "../components/ScreenFadeIn";
 import { SectionHeader } from "../components/SectionHeader";
-import { fontFamily, theme } from "../constants/theme";
+import { APP_TAB_BAR_HEIGHT } from "../constants/layout";
+import { fontFamily } from "../constants/theme";
+import type { AppTheme } from "../constants/theme";
 import { useAsyncResource } from "../hooks/useAsyncResource";
 import { predictionService } from "../services/mockApi";
+import { useAppTheme } from "../theme/AppThemeProvider";
 import type { HomeStackParamList } from "../types/navigation";
 
 type HomeScreenProps = NativeStackScreenProps<HomeStackParamList, "Home">;
@@ -21,6 +25,22 @@ type HomePayload = {
 };
 
 export const HomeScreen = ({ navigation }: HomeScreenProps) => {
+  const { theme } = useAppTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const tabBarHeight = APP_TAB_BAR_HEIGHT;
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isCompactWidth = width < 380;
+
+  const contentInsets = useMemo(
+    () => ({
+      paddingLeft: theme.spacing.md + insets.left,
+      paddingRight: theme.spacing.md + insets.right,
+      paddingBottom: tabBarHeight + insets.bottom + theme.spacing.lg,
+    }),
+    [insets.bottom, insets.left, insets.right, tabBarHeight]
+  );
+
   const fetchHome = useCallback<() => Promise<HomePayload>>(async () => {
     const [seasonData, featuredRaceData] = await Promise.all([
       predictionService.getSeasons(),
@@ -66,18 +86,18 @@ export const HomeScreen = ({ navigation }: HomeScreenProps) => {
       <ScreenFadeIn>
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, contentInsets]}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.hero}>
-            <View style={styles.heroShapeLarge} />
-            <View style={styles.heroShapeSmall} />
+            <View style={[styles.heroShapeLarge, isCompactWidth && styles.heroShapeLargeCompact]} />
+            <View style={[styles.heroShapeSmall, isCompactWidth && styles.heroShapeSmallCompact]} />
             <Text style={styles.heroTag}>Telemetry Motorsport UI</Text>
-            <Text style={styles.heroTitle}>F1 Insight Hub</Text>
+            <Text style={[styles.heroTitle, isCompactWidth && styles.heroTitleCompact]}>F1 Insight Hub</Text>
             <Text style={styles.heroSubtitle}>
               Browse races by season, inspect mock Top-10 projections, and explore racer-level context.
             </Text>
-            <View style={styles.heroActions}>
+            <View style={[styles.heroActions, isCompactWidth && styles.heroActionsCompact]}>
               <Pressable style={styles.primaryButton} onPress={openBrowse} testID="home-open-browse">
                 <Text style={styles.primaryButtonText}>Browse Seasons</Text>
               </Pressable>
@@ -87,7 +107,7 @@ export const HomeScreen = ({ navigation }: HomeScreenProps) => {
             </View>
           </View>
 
-          <View style={styles.metricRow}>
+          <View style={[styles.metricRow, isCompactWidth && styles.metricRowCompact]}>
             <View style={styles.metricCard}>
               <Text style={styles.metricLabel}>Active Seasons</Text>
               <Text style={styles.metricValue}>{seasons.length}</Text>
@@ -123,118 +143,146 @@ export const HomeScreen = ({ navigation }: HomeScreenProps) => {
   return <View style={styles.container}>{renderBody()}</View>;
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    padding: theme.spacing.md,
-    gap: theme.spacing.lg,
-    paddingBottom: theme.spacing.xxl,
-  },
-  hero: {
-    backgroundColor: "#1A1F2D",
-    borderRadius: theme.radius.lg,
-    padding: theme.spacing.lg,
-    overflow: "hidden",
-    gap: theme.spacing.sm,
-  },
-  heroShapeLarge: {
-    position: "absolute",
-    width: 220,
-    height: 220,
-    borderRadius: 220,
-    backgroundColor: "rgba(210, 14, 42, 0.2)",
-    top: -60,
-    right: -70,
-  },
-  heroShapeSmall: {
-    position: "absolute",
-    width: 120,
-    height: 120,
-    borderRadius: 120,
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
-    bottom: -30,
-    left: -20,
-  },
-  heroTag: {
-    fontFamily: fontFamily.bodySemi,
-    color: "#F7B4BF",
-    fontSize: theme.typeScale.caption,
-    textTransform: "uppercase",
-    letterSpacing: 1.2,
-  },
-  heroTitle: {
-    fontFamily: fontFamily.headingBold,
-    color: theme.colors.surface,
-    fontSize: theme.typeScale.hero,
-    lineHeight: 46,
-  },
-  heroSubtitle: {
-    fontFamily: fontFamily.bodyRegular,
-    color: "#D8DEEA",
-    fontSize: theme.typeScale.body,
-    lineHeight: 21,
-  },
-  heroActions: {
-    marginTop: theme.spacing.sm,
-    flexDirection: "row",
-    gap: theme.spacing.sm,
-  },
-  primaryButton: {
-    flex: 1,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.accent,
-    alignItems: "center",
-    paddingVertical: theme.spacing.sm,
-  },
-  primaryButtonText: {
-    fontFamily: fontFamily.bodyBold,
-    color: theme.colors.surface,
-    fontSize: theme.typeScale.body,
-  },
-  secondaryButton: {
-    flex: 1,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: "#5B667E",
-    alignItems: "center",
-    paddingVertical: theme.spacing.sm,
-  },
-  secondaryButtonText: {
-    fontFamily: fontFamily.bodySemi,
-    color: theme.colors.surface,
-    fontSize: theme.typeScale.body,
-  },
-  metricRow: {
-    flexDirection: "row",
-    gap: theme.spacing.sm,
-  },
-  metricCard: {
-    flex: 1,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    padding: theme.spacing.md,
-    gap: theme.spacing.xxs,
-  },
-  metricLabel: {
-    fontFamily: fontFamily.bodySemi,
-    color: theme.colors.textSecondary,
-    fontSize: theme.typeScale.bodySmall,
-  },
-  metricValue: {
-    fontFamily: fontFamily.headingSemi,
-    color: theme.colors.textPrimary,
-    fontSize: theme.typeScale.h1,
-    lineHeight: 34,
-  },
-  featuredList: {
-    gap: theme.spacing.sm,
-  },
-});
+const createStyles = (theme: AppTheme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    scroll: {
+      flex: 1,
+    },
+    content: {
+      padding: theme.spacing.md,
+      gap: theme.spacing.lg,
+      paddingBottom: theme.spacing.xxl,
+    },
+    hero: {
+      backgroundColor: theme.colors.heroSurface,
+      borderRadius: theme.radius.lg,
+      padding: theme.spacing.lg,
+      overflow: "hidden",
+      gap: theme.spacing.sm,
+    },
+    heroShapeLarge: {
+      position: "absolute",
+      width: 220,
+      height: 220,
+      borderRadius: 220,
+      backgroundColor: theme.colors.heroShapeLarge,
+      top: -60,
+      right: -70,
+    },
+    heroShapeLargeCompact: {
+      width: 170,
+      height: 170,
+      borderRadius: 170,
+      top: -50,
+      right: -56,
+    },
+    heroShapeSmall: {
+      position: "absolute",
+      width: 120,
+      height: 120,
+      borderRadius: 120,
+      backgroundColor: theme.colors.heroShapeSmall,
+      bottom: -30,
+      left: -20,
+    },
+    heroShapeSmallCompact: {
+      width: 90,
+      height: 90,
+      borderRadius: 90,
+      bottom: -24,
+    },
+    heroTag: {
+      fontFamily: fontFamily.bodySemi,
+      color: theme.colors.heroTag,
+      fontSize: theme.typeScale.caption,
+      textTransform: "uppercase",
+      letterSpacing: 1.2,
+    },
+    heroTitle: {
+      fontFamily: fontFamily.headingBold,
+      color: "#FFFFFF",
+      fontSize: theme.typeScale.hero,
+      lineHeight: 46,
+    },
+    heroTitleCompact: {
+      fontSize: 36,
+      lineHeight: 38,
+    },
+    heroSubtitle: {
+      fontFamily: fontFamily.bodyRegular,
+      color: theme.colors.heroSubtitle,
+      fontSize: theme.typeScale.body,
+      lineHeight: 21,
+    },
+    heroActions: {
+      marginTop: theme.spacing.sm,
+      flexDirection: "row",
+      gap: theme.spacing.sm,
+    },
+    heroActionsCompact: {
+      flexDirection: "column",
+    },
+    primaryButton: {
+      flex: 1,
+      minHeight: 44,
+      borderRadius: theme.radius.md,
+      backgroundColor: theme.colors.accent,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: theme.spacing.sm,
+    },
+    primaryButtonText: {
+      fontFamily: fontFamily.bodyBold,
+      color: theme.colors.surface,
+      fontSize: theme.typeScale.body,
+    },
+    secondaryButton: {
+      flex: 1,
+      minHeight: 44,
+      borderRadius: theme.radius.md,
+      borderWidth: 1,
+      borderColor: theme.colors.secondaryBorder,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: theme.spacing.sm,
+    },
+    secondaryButtonText: {
+      fontFamily: fontFamily.bodySemi,
+      color: theme.colors.surface,
+      fontSize: theme.typeScale.body,
+    },
+    metricRow: {
+      flexDirection: "row",
+      gap: theme.spacing.sm,
+    },
+    metricRowCompact: {
+      flexDirection: "column",
+    },
+    metricCard: {
+      flex: 1,
+      borderRadius: theme.radius.md,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
+      padding: theme.spacing.md,
+      gap: theme.spacing.xxs,
+    },
+    metricLabel: {
+      fontFamily: fontFamily.bodySemi,
+      color: theme.colors.textSecondary,
+      fontSize: theme.typeScale.bodySmall,
+    },
+    metricValue: {
+      fontFamily: fontFamily.headingSemi,
+      color: theme.colors.textPrimary,
+      fontSize: theme.typeScale.h1,
+      lineHeight: 34,
+    },
+    featuredList: {
+      gap: theme.spacing.sm,
+    },
+  });

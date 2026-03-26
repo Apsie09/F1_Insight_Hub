@@ -1,5 +1,6 @@
-import { useCallback, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useCallback, useMemo, useState } from "react";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { EmptyState } from "../components/EmptyState";
 import { ErrorState } from "../components/ErrorState";
@@ -8,9 +9,12 @@ import { LoadingState } from "../components/LoadingState";
 import { PredictionForm } from "../components/PredictionForm";
 import { ScreenFadeIn } from "../components/ScreenFadeIn";
 import { SectionHeader } from "../components/SectionHeader";
-import { fontFamily, theme } from "../constants/theme";
+import { APP_TAB_BAR_HEIGHT } from "../constants/layout";
+import { fontFamily } from "../constants/theme";
+import type { AppTheme } from "../constants/theme";
 import { useAsyncResource } from "../hooks/useAsyncResource";
 import { predictionService } from "../services/mockApi";
+import { useAppTheme } from "../theme/AppThemeProvider";
 import type { CalculatorInput, CalculatorResult } from "../types/domain";
 import { formatPercent } from "../utils/format";
 
@@ -21,9 +25,22 @@ type PredictionPayload = {
 };
 
 export const PredictionScreen = () => {
+  const { theme } = useAppTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [submitPending, setSubmitPending] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [result, setResult] = useState<CalculatorResult | null>(null);
+  const tabBarHeight = APP_TAB_BAR_HEIGHT;
+  const insets = useSafeAreaInsets();
+
+  const contentInsets = useMemo(
+    () => ({
+      paddingLeft: theme.spacing.md + insets.left,
+      paddingRight: theme.spacing.md + insets.right,
+      paddingBottom: tabBarHeight + insets.bottom + theme.spacing.lg,
+    }),
+    [insets.bottom, insets.left, insets.right, tabBarHeight]
+  );
 
   const fetchPayload = useCallback(async (): Promise<PredictionPayload> => {
     const [seasonData, raceData, racerData] = await Promise.all([
@@ -54,7 +71,7 @@ export const PredictionScreen = () => {
 
   if (resource.status === "loading" || resource.status === "idle") {
     return (
-      <View style={styles.stateContainer}>
+      <View style={[styles.stateContainer, contentInsets]}>
         <LoadingState label="Booting calculator controls..." />
       </View>
     );
@@ -62,7 +79,7 @@ export const PredictionScreen = () => {
 
   if (resource.status === "error") {
     return (
-      <View style={styles.stateContainer}>
+      <View style={[styles.stateContainer, contentInsets]}>
         <ErrorState message={resource.error ?? "Calculator data unavailable."} onRetry={resource.refresh} />
       </View>
     );
@@ -70,7 +87,7 @@ export const PredictionScreen = () => {
 
   if (resource.status === "empty" || !resource.data) {
     return (
-      <View style={styles.stateContainer}>
+      <View style={[styles.stateContainer, contentInsets]}>
         <EmptyState
           title="Calculator feed empty"
           message="Seasons, races, or racers are missing in mocked fixtures."
@@ -83,104 +100,116 @@ export const PredictionScreen = () => {
 
   return (
     <ScreenFadeIn>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={styles.keyboardContainer}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={8}
       >
-        <SectionHeader
-          title="Prediction Calculator"
-          subtitle="UI-only form with mocked model response."
-        />
-        <PredictionForm
-          seasons={resource.data.seasons}
-          races={resource.data.races}
-          racers={resource.data.racers}
-          submitting={submitPending}
-          onSubmit={handleSubmit}
-        />
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={[styles.content, contentInsets]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        >
+          <SectionHeader
+            title="Prediction Calculator"
+            subtitle="UI-only form with mocked model response."
+          />
+          <PredictionForm
+            seasons={resource.data.seasons}
+            races={resource.data.races}
+            racers={resource.data.racers}
+            submitting={submitPending}
+            onSubmit={handleSubmit}
+          />
 
-        {submitError ? <ErrorState message={submitError} /> : null}
+          {submitError ? <ErrorState message={submitError} /> : null}
 
-        {result ? (
-          <InfoCard title="Mock Prediction Result" value={`${formatPercent(result.predictedTop10Probability)} Top-10`}>
-            <Text style={styles.resultMeta}>
-              {result.racerName} · Confidence: {result.confidence}
-            </Text>
-            <View style={styles.reasoningList}>
-              {result.reasoning.map((reason, index) => (
-                <View key={`${reason}-${index}`} style={styles.reasoningRow}>
-                  <View style={styles.reasoningDot} />
-                  <Text style={styles.reasoningText}>{reason}</Text>
-                </View>
-              ))}
-            </View>
-          </InfoCard>
-        ) : (
-          <InfoCard title="Result Placeholder">
+          {result ? (
+            <InfoCard title="Mock Prediction Result" value={`${formatPercent(result.predictedTop10Probability)} Top-10`}>
+              <Text style={styles.resultMeta}>
+                {result.racerName} - Confidence: {result.confidence}
+              </Text>
+              <View style={styles.reasoningList}>
+                {result.reasoning.map((reason, index) => (
+                  <View key={`${reason}-${index}`} style={styles.reasoningRow}>
+                    <View style={styles.reasoningDot} />
+                    <Text style={styles.reasoningText}>{reason}</Text>
+                  </View>
+                ))}
+              </View>
+            </InfoCard>
+          ) : (
+            <InfoCard title="Result Placeholder">
+              <Text style={styles.placeholderText}>
+                Submit the form to preview mocked prediction confidence and reasoning cards.
+              </Text>
+            </InfoCard>
+          )}
+
+          <InfoCard title="Future ML Integration Slot">
             <Text style={styles.placeholderText}>
-              Submit the form to preview mocked prediction confidence and reasoning cards.
+              This panel is reserved for API confidence bands, feature contribution details, and model-version metadata.
             </Text>
           </InfoCard>
-        )}
-
-        <InfoCard title="Future ML Integration Slot">
-          <Text style={styles.placeholderText}>
-            This panel is reserved for API confidence bands, feature contribution details, and model-version metadata.
-          </Text>
-        </InfoCard>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </ScreenFadeIn>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  content: {
-    gap: theme.spacing.md,
-    padding: theme.spacing.md,
-    paddingBottom: 110,
-  },
-  stateContainer: {
-    flex: 1,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.background,
-  },
-  resultMeta: {
-    fontFamily: fontFamily.bodySemi,
-    color: theme.colors.textPrimary,
-    fontSize: theme.typeScale.body,
-  },
-  reasoningList: {
-    marginTop: theme.spacing.sm,
-    gap: theme.spacing.xs,
-  },
-  reasoningRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: theme.spacing.xs,
-  },
-  reasoningDot: {
-    marginTop: 7,
-    width: 7,
-    height: 7,
-    borderRadius: 7,
-    backgroundColor: theme.colors.accent,
-  },
-  reasoningText: {
-    flex: 1,
-    fontFamily: fontFamily.bodyRegular,
-    color: theme.colors.textSecondary,
-    fontSize: theme.typeScale.body,
-    lineHeight: 21,
-  },
-  placeholderText: {
-    fontFamily: fontFamily.bodyRegular,
-    color: theme.colors.textSecondary,
-    fontSize: theme.typeScale.body,
-    lineHeight: 21,
-  },
-});
+const createStyles = (theme: AppTheme) =>
+  StyleSheet.create({
+    keyboardContainer: {
+      flex: 1,
+    },
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    content: {
+      gap: theme.spacing.md,
+      padding: theme.spacing.md,
+      paddingBottom: theme.spacing.lg,
+    },
+    stateContainer: {
+      flex: 1,
+      padding: theme.spacing.md,
+      backgroundColor: theme.colors.background,
+    },
+    resultMeta: {
+      fontFamily: fontFamily.bodySemi,
+      color: theme.colors.textPrimary,
+      fontSize: theme.typeScale.body,
+    },
+    reasoningList: {
+      marginTop: theme.spacing.sm,
+      gap: theme.spacing.xs,
+    },
+    reasoningRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: theme.spacing.xs,
+    },
+    reasoningDot: {
+      marginTop: 7,
+      width: 7,
+      height: 7,
+      borderRadius: 7,
+      backgroundColor: theme.colors.accent,
+    },
+    reasoningText: {
+      flex: 1,
+      fontFamily: fontFamily.bodyRegular,
+      color: theme.colors.textSecondary,
+      fontSize: theme.typeScale.body,
+      lineHeight: 21,
+    },
+    placeholderText: {
+      fontFamily: fontFamily.bodyRegular,
+      color: theme.colors.textSecondary,
+      fontSize: theme.typeScale.body,
+      lineHeight: 21,
+    },
+  });

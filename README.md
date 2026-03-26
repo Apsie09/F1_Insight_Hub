@@ -15,6 +15,9 @@ The mobile UI is implemented with Expo + TypeScript and includes:
 - Race details with race metadata and predicted Top-10 list.
 - Racer details with profile, stats, and selected-race context.
 - Prediction calculator screen (UI-only) with mocked response.
+- App-wide dark/light theme switch in the header.
+- Smooth theme transition animation (with reduced-motion accessibility support).
+- Left/right finger swipe between main sections (`Home`, `Browse`, `Prediction`).
 - Loading / Empty / Error / Success states.
 - Reusable component structure and typed service contracts.
 
@@ -27,7 +30,7 @@ Important scope note: backend, database, and ML inference are intentionally not 
 - React 19
 - React Native Web
 - TypeScript
-- React Navigation (bottom tabs + native stack)
+- React Navigation (material top tabs positioned at bottom + native stack)
 - Jest + React Native Testing Library
 
 ## Prerequisites
@@ -61,7 +64,7 @@ From `mobile/package.json`:
 - `@expo-google-fonts/barlow-condensed` `^0.4.1`
 - `@expo-google-fonts/source-sans-3` `^0.4.1`
 - `@expo/vector-icons` `^15.1.1`
-- `@react-navigation/bottom-tabs` `^7.15.5`
+- `@react-navigation/material-top-tabs` `^7.4.21`
 - `@react-navigation/native` `^7.1.33`
 - `@react-navigation/native-stack` `^7.14.4`
 - `expo` `~55.0.6`
@@ -71,8 +74,10 @@ From `mobile/package.json`:
 - `react-dom` `19.2.0`
 - `react-native` `0.83.2`
 - `react-native-gesture-handler` `~2.30.0`
+- `react-native-pager-view` `8.0.0`
 - `react-native-safe-area-context` `~5.6.2`
 - `react-native-screens` `~4.23.0`
+- `react-native-tab-view` `^4.3.0`
 - `react-native-web` `^0.21.0`
 
 ### Dev dependencies
@@ -80,8 +85,9 @@ From `mobile/package.json`:
 - `@testing-library/react-native` `^13.3.3`
 - `@types/jest` `29.5.14`
 - `@types/react` `~19.2.2`
+- `@types/react-test-renderer` `^19.1.0`
 - `jest` `^29.7.0`
-- `jest-expo` `^55.0.9`
+- `jest-expo` `~55.0.11`
 - `react-test-renderer` `^19.2.0`
 - `typescript` `~5.9.2`
 

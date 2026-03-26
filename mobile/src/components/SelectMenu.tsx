@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   FlatList,
@@ -60,6 +60,8 @@ export const SelectMenu = ({
       return;
     }
 
+    animation.stopAnimation();
+    animation.setValue(0);
     setVisible(true);
     Animated.spring(animation, {
       toValue: 1,
@@ -70,17 +72,17 @@ export const SelectMenu = ({
     }).start();
   };
 
-  const closeMenu = () => {
-    Animated.timing(animation, {
-      toValue: 0,
-      duration: 170,
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (finished) {
-        setVisible(false);
-      }
-    });
-  };
+  const closeMenu = useCallback(() => {
+    animation.stopAnimation();
+    animation.setValue(0);
+    setVisible(false);
+  }, [animation]);
+
+  useEffect(() => {
+    return () => {
+      animation.stopAnimation();
+    };
+  }, [animation]);
 
   const selectOption = (nextValue: string) => {
     onChange(nextValue);

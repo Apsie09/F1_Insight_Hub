@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { ScrollView, Pressable, StyleSheet, Text } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { fontFamily } from "../constants/theme";
 import type { AppTheme } from "../constants/theme";
@@ -16,12 +16,7 @@ export const YearChipSelector = ({ years, selectedYear, onSelect }: YearChipSele
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
-    <ScrollView
-      style={styles.scroll}
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.container}
-    >
+    <View style={styles.container}>
       {years.map((year) => {
         const selected = year === selectedYear;
         return (
@@ -39,23 +34,19 @@ export const YearChipSelector = ({ years, selectedYear, onSelect }: YearChipSele
           </Pressable>
         );
       })}
-    </ScrollView>
+    </View>
   );
 };
 
 const createStyles = (theme: AppTheme) =>
   StyleSheet.create({
-    scroll: {
-      flexGrow: 0,
-      minHeight: 56,
-    },
     container: {
       flexDirection: "row",
-      alignItems: "center",
+      flexWrap: "wrap",
+      alignItems: "flex-start",
       gap: theme.spacing.sm,
       paddingVertical: theme.spacing.xs,
       paddingHorizontal: theme.spacing.xs,
-      paddingRight: theme.spacing.md,
     },
     chip: {
       flexGrow: 0,

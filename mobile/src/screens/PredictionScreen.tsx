@@ -7,7 +7,6 @@ import { ErrorState } from "../components/ErrorState";
 import { InfoCard } from "../components/InfoCard";
 import { LoadingState } from "../components/LoadingState";
 import { PredictionForm } from "../components/PredictionForm";
-import { ScreenFadeIn } from "../components/ScreenFadeIn";
 import { SectionHeader } from "../components/SectionHeader";
 import { APP_TAB_BAR_HEIGHT } from "../constants/layout";
 import { fontFamily } from "../constants/theme";
@@ -99,63 +98,58 @@ export const PredictionScreen = () => {
   }
 
   return (
-    <ScreenFadeIn>
-      <KeyboardAvoidingView
-        style={styles.keyboardContainer}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={8}
+    <KeyboardAvoidingView
+      style={styles.keyboardContainer}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={8}
+    >
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[styles.content, contentInsets]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
       >
-        <ScrollView
-          style={styles.container}
-          contentContainerStyle={[styles.content, contentInsets]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
-        >
-          <SectionHeader
-            title="Prediction Calculator"
-            subtitle="UI-only form with mocked model response."
-          />
-          <PredictionForm
-            seasons={resource.data.seasons}
-            races={resource.data.races}
-            racers={resource.data.racers}
-            submitting={submitPending}
-            onSubmit={handleSubmit}
-          />
+        <SectionHeader title="Prediction Calculator" subtitle="UI-only form with mocked model response." />
+        <PredictionForm
+          seasons={resource.data.seasons}
+          races={resource.data.races}
+          racers={resource.data.racers}
+          submitting={submitPending}
+          onSubmit={handleSubmit}
+        />
 
-          {submitError ? <ErrorState message={submitError} /> : null}
+        {submitError ? <ErrorState message={submitError} /> : null}
 
-          {result ? (
-            <InfoCard title="Mock Prediction Result" value={`${formatPercent(result.predictedTop10Probability)} Top-10`}>
-              <Text style={styles.resultMeta}>
-                {result.racerName} - Confidence: {result.confidence}
-              </Text>
-              <View style={styles.reasoningList}>
-                {result.reasoning.map((reason, index) => (
-                  <View key={`${reason}-${index}`} style={styles.reasoningRow}>
-                    <View style={styles.reasoningDot} />
-                    <Text style={styles.reasoningText}>{reason}</Text>
-                  </View>
-                ))}
-              </View>
-            </InfoCard>
-          ) : (
-            <InfoCard title="Result Placeholder">
-              <Text style={styles.placeholderText}>
-                Submit the form to preview mocked prediction confidence and reasoning cards.
-              </Text>
-            </InfoCard>
-          )}
-
-          <InfoCard title="Future ML Integration Slot">
+        {result ? (
+          <InfoCard title="Mock Prediction Result" value={`${formatPercent(result.predictedTop10Probability)} Top-10`}>
+            <Text style={styles.resultMeta}>
+              {result.racerName} - Confidence: {result.confidence}
+            </Text>
+            <View style={styles.reasoningList}>
+              {result.reasoning.map((reason, index) => (
+                <View key={`${reason}-${index}`} style={styles.reasoningRow}>
+                  <View style={styles.reasoningDot} />
+                  <Text style={styles.reasoningText}>{reason}</Text>
+                </View>
+              ))}
+            </View>
+          </InfoCard>
+        ) : (
+          <InfoCard title="Result Placeholder">
             <Text style={styles.placeholderText}>
-              This panel is reserved for API confidence bands, feature contribution details, and model-version metadata.
+              Submit the form to preview mocked prediction confidence and reasoning cards.
             </Text>
           </InfoCard>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </ScreenFadeIn>
+        )}
+
+        <InfoCard title="Future ML Integration Slot">
+          <Text style={styles.placeholderText}>
+            This panel is reserved for API confidence bands, feature contribution details, and model-version metadata.
+          </Text>
+        </InfoCard>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 

@@ -7,7 +7,6 @@ import { EmptyState } from "../components/EmptyState";
 import { ErrorState } from "../components/ErrorState";
 import { LoadingState } from "../components/LoadingState";
 import { RaceCard } from "../components/RaceCard";
-import { ScreenFadeIn } from "../components/ScreenFadeIn";
 import { SectionHeader } from "../components/SectionHeader";
 import { APP_TAB_BAR_HEIGHT } from "../constants/layout";
 import { fontFamily } from "../constants/theme";
@@ -83,60 +82,56 @@ export const HomeScreen = ({ navigation }: HomeScreenProps) => {
     const { seasons, featuredRaces } = homeResource.data;
 
     return (
-      <ScreenFadeIn>
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={[styles.content, contentInsets]}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.hero}>
-            <View style={[styles.heroShapeLarge, isCompactWidth && styles.heroShapeLargeCompact]} />
-            <View style={[styles.heroShapeSmall, isCompactWidth && styles.heroShapeSmallCompact]} />
-            <Text style={styles.heroTag}>Telemetry Motorsport UI</Text>
-            <Text style={[styles.heroTitle, isCompactWidth && styles.heroTitleCompact]}>F1 Insight Hub</Text>
-            <Text style={styles.heroSubtitle}>
-              Browse races by season, inspect mock Top-10 projections, and explore racer-level context.
-            </Text>
-            <View style={[styles.heroActions, isCompactWidth && styles.heroActionsCompact]}>
-              <Pressable style={styles.primaryButton} onPress={openBrowse} testID="home-open-browse">
-                <Text style={styles.primaryButtonText}>Browse Seasons</Text>
-              </Pressable>
-              <Pressable style={styles.secondaryButton} onPress={openPrediction} testID="home-open-prediction">
-                <Text style={styles.secondaryButtonText}>Open Calculator</Text>
-              </Pressable>
-            </View>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.content, contentInsets]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.hero}>
+          <View style={[styles.heroShapeLarge, isCompactWidth && styles.heroShapeLargeCompact]} />
+          <View style={[styles.heroShapeSmall, isCompactWidth && styles.heroShapeSmallCompact]} />
+          <Text style={styles.heroTag}>Telemetry Motorsport UI</Text>
+          <Text style={[styles.heroTitle, isCompactWidth && styles.heroTitleCompact]}>F1 Insight Hub</Text>
+          <Text style={styles.heroSubtitle}>
+            Browse races by season, inspect mock Top-10 projections, and explore racer-level context.
+          </Text>
+          <View style={[styles.heroActions, isCompactWidth && styles.heroActionsCompact]}>
+            <Pressable style={styles.primaryButton} onPress={openBrowse} testID="home-open-browse">
+              <Text style={styles.primaryButtonText}>Browse Seasons</Text>
+            </Pressable>
+            <Pressable style={styles.secondaryButton} onPress={openPrediction} testID="home-open-prediction">
+              <Text style={styles.secondaryButtonText}>Open Calculator</Text>
+            </Pressable>
           </View>
+        </View>
 
-          <View style={[styles.metricRow, isCompactWidth && styles.metricRowCompact]}>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>Active Seasons</Text>
-              <Text style={styles.metricValue}>{seasons.length}</Text>
-            </View>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>Tracked Races</Text>
-              <Text style={styles.metricValue}>
-                {seasons.reduce((total, season) => total + season.totalRaces, 0)}
-              </Text>
-            </View>
+        <View style={[styles.metricRow, isCompactWidth && styles.metricRowCompact]}>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>Active Seasons</Text>
+            <Text style={styles.metricValue}>{seasons.length}</Text>
           </View>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>Tracked Races</Text>
+            <Text style={styles.metricValue}>{seasons.reduce((total, season) => total + season.totalRaces, 0)}</Text>
+          </View>
+        </View>
 
-          <SectionHeader title="Featured Race Boards" subtitle="Direct links into race-level prediction details." />
-          <View style={styles.featuredList}>
-            {featuredRaces.map((race) => (
-              <RaceCard
-                key={race.id}
-                race={race}
-                onPress={(selectedRace) =>
-                  navigation.navigate("RaceDetails", {
-                    raceId: selectedRace.id,
-                    season: selectedRace.season,
-                  })
-                }
-              />
-            ))}
-          </View>
-        </ScrollView>
-      </ScreenFadeIn>
+        <SectionHeader title="Featured Race Boards" subtitle="Direct links into race-level prediction details." />
+        <View style={styles.featuredList}>
+          {featuredRaces.map((race) => (
+            <RaceCard
+              key={race.id}
+              race={race}
+              onPress={(selectedRace) =>
+                navigation.navigate("RaceDetails", {
+                  raceId: selectedRace.id,
+                  season: selectedRace.season,
+                })
+              }
+            />
+          ))}
+        </View>
+      </ScrollView>
     );
   };
 
@@ -252,7 +247,7 @@ const createStyles = (theme: AppTheme) =>
     },
     secondaryButtonText: {
       fontFamily: fontFamily.bodySemi,
-      color: theme.colors.surface,
+      color: "#FFFFFF",
       fontSize: theme.typeScale.body,
     },
     metricRow: {

@@ -1,0 +1,78 @@
+import "react-native-gesture-handler";
+
+import { StatusBar } from "expo-status-bar";
+import { useFonts } from "expo-font";
+import {
+  BarlowCondensed_600SemiBold,
+  BarlowCondensed_700Bold,
+} from "@expo-google-fonts/barlow-condensed";
+import {
+  SourceSans3_400Regular,
+  SourceSans3_600SemiBold,
+  SourceSans3_700Bold,
+} from "@expo-google-fonts/source-sans-3";
+import { Animated, StyleSheet, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+
+import { lightTheme } from "./src/constants/theme";
+import { AppNavigator } from "./src/navigation/AppNavigator";
+import { AppThemeProvider, useAppTheme } from "./src/theme/AppThemeProvider";
+
+const ThemedApp = () => {
+  const { isDark, transitionOpacity, transitionOverlayColor } = useAppTheme();
+
+  return (
+    <View style={styles.themedRoot}>
+      <StatusBar style={isDark ? "light" : "dark"} />
+      <AppNavigator />
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          StyleSheet.absoluteFillObject,
+          {
+            opacity: transitionOpacity,
+            backgroundColor: transitionOverlayColor,
+          },
+        ]}
+      />
+    </View>
+  );
+};
+
+export default function App() {
+  const [fontsLoaded] = useFonts({
+    [lightTheme.fonts.headingSemi]: BarlowCondensed_600SemiBold,
+    [lightTheme.fonts.headingBold]: BarlowCondensed_700Bold,
+    [lightTheme.fonts.bodyRegular]: SourceSans3_400Regular,
+    [lightTheme.fonts.bodySemi]: SourceSans3_600SemiBold,
+    [lightTheme.fonts.bodyBold]: SourceSans3_700Bold,
+  });
+
+  if (!fontsLoaded) {
+    return <View style={styles.splashFallback} />;
+  }
+
+  return (
+    <GestureHandlerRootView style={styles.root}>
+      <SafeAreaProvider>
+        <AppThemeProvider>
+          <ThemedApp />
+        </AppThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  themedRoot: {
+    flex: 1,
+  },
+  splashFallback: {
+    flex: 1,
+    backgroundColor: lightTheme.colors.background,
+  },
+});

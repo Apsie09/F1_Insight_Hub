@@ -95,6 +95,9 @@ const rankConfidence = (probability: number): CalculatorResult["confidence"] => 
   return "Low";
 };
 
+const deriveRecentFormScore = (baselineProbability: number): number =>
+  Math.round(clamp(35 + baselineProbability * 55, 0, 100));
+
 const calculateFromInput = (input: CalculatorInput): CalculatorResult => {
   const racer = racerMap[input.racerId];
   const race = raceMap[input.raceId];
@@ -102,8 +105,9 @@ const calculateFromInput = (input: CalculatorInput): CalculatorResult => {
     top10PredictionsByRace[input.raceId]?.find((entry) => entry.racerId === input.racerId) ?? null;
 
   const baseline = baselineEntry?.top10Probability ?? 0.46;
+  const recentFormScore = deriveRecentFormScore(baseline);
   const gridAdjustment = clamp((11 - input.gridPosition) * 0.014, -0.14, 0.14);
-  const formAdjustment = clamp((input.recentFormScore - 50) / 500, -0.1, 0.1);
+  const formAdjustment = clamp((recentFormScore - 50) / 500, -0.1, 0.1);
   const weatherAdjustment =
     input.weatherCondition === "Wet"
       ? -0.025
@@ -119,9 +123,10 @@ const calculateFromInput = (input: CalculatorInput): CalculatorResult => {
     raceId: input.raceId,
     predictedTop10Probability: probability,
     confidence: rankConfidence(probability),
+    recentFormScore,
     reasoning: [
       `${race?.name ?? "Selected race"} baseline model prior: ${Math.round(baseline * 100)}%.`,
-      `Grid ${input.gridPosition} and recent form score ${input.recentFormScore} adjusted the estimate.`,
+      `Grid ${input.gridPosition} and backend-derived recent form score ${recentFormScore} adjusted the estimate.`,
       `${input.weatherCondition} condition profile applied via mocked variance curve.`,
     ],
   };
@@ -196,6 +201,23 @@ export const predictionService: PredictionService = {
     withScenario(
       "top10",
       () => [...(top10PredictionsByRace[raceId] ?? [])].sort((a, b) => a.rank - b.rank),
+      () => []
+    ),
+
+  getRaceParticipants: (raceId) =>
+    withScenario(
+      "racers",
+      () => {
+        const entries = top10PredictionsByRace[raceId] ?? [];
+        const entryByRacerId = new Map(entries.map((entry) => [entry.racerId, entry]));
+        return racerProfiles
+          .filter((racer) => entryByRacerId.has(racer.id))
+          .map((racer) => ({
+            ...racer,
+            recentFormScore: deriveRecentFormScore(entryByRacerId.get(racer.id)?.top10Probability ?? 0.46),
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name));
+      },
       () => []
     ),
 

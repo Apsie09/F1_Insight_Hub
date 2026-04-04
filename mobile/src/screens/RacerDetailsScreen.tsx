@@ -13,7 +13,7 @@ import { APP_TAB_BAR_HEIGHT } from "../constants/layout";
 import { fontFamily } from "../constants/theme";
 import type { AppTheme } from "../constants/theme";
 import { useAsyncResource } from "../hooks/useAsyncResource";
-import { predictionService } from "../services/mockApi";
+import { predictionService } from "../services/predictionService";
 import { useAppTheme } from "../theme/AppThemeProvider";
 import type { RacerDetailsParams } from "../types/navigation";
 
@@ -130,7 +130,7 @@ export const RacerDetailsScreen = ({ route }: RacerDetailsScreenProps) => {
         />
         <InfoCard title="Placeholder">
           <Text style={styles.contextCopy}>
-            Backend and ML explanation payloads will surface here once integrated. Current values are mocked.
+            Backend and ML explanation payloads will surface here once integrated. Current values come from the backend feed.
           </Text>
         </InfoCard>
       </ScrollView>

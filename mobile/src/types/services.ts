@@ -38,6 +38,7 @@ export type PredictionService = {
   getFeaturedRaces(): Promise<Race[]>;
   getRaceDetails(raceId: string): Promise<RaceDetailsResponse>;
   getTop10Prediction(raceId: string): Promise<Top10PredictionEntry[]>;
+  getRaceParticipants(raceId: string): Promise<RacerProfile[]>;
   getRacerDetails(racerId: string, raceId: string): Promise<RacerDetailsResponse>;
   getRacers(): Promise<RacerProfile[]>;
   calculatePrediction(input: CalculatorInput): Promise<CalculatorResult>;

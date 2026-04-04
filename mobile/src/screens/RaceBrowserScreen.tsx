@@ -12,7 +12,7 @@ import { YearChipSelector } from "../components/YearChipSelector";
 import { APP_TAB_BAR_HEIGHT } from "../constants/layout";
 import type { AppTheme } from "../constants/theme";
 import { useAsyncResource } from "../hooks/useAsyncResource";
-import { predictionService } from "../services/mockApi";
+import { predictionService } from "../services/predictionService";
 import { useAppTheme } from "../theme/AppThemeProvider";
 import type { BrowseStackParamList } from "../types/navigation";
 
@@ -118,7 +118,7 @@ export const RaceBrowserScreen = ({ navigation }: RaceBrowserScreenProps) => {
         {racesResource.status === "empty" ? (
           <EmptyState
             title="No races available"
-            message="This season has no race fixtures in the current mock scenario."
+          message="This season has no race fixtures in the current backend response."
             actionLabel="Reload"
             onAction={racesResource.refresh}
           />

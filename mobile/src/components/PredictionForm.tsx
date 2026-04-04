@@ -26,8 +26,11 @@ import { YearChipSelector } from "./YearChipSelector";
 type PredictionFormProps = {
   seasons: Season[];
   races: Race[];
-  racers: RacerProfile[];
+  availableRacers: RacerProfile[];
+  racersLoading?: boolean;
+  racerLoadError?: string | null;
   submitting?: boolean;
+  onRaceChange?: (raceId: string) => void;
   onSubmit: (input: CalculatorInput) => void;
 };
 
@@ -36,8 +39,11 @@ const weatherOptions: WeatherCondition[] = ["Dry", "Mixed", "Wet"];
 export const PredictionForm = ({
   seasons,
   races,
-  racers,
+  availableRacers,
+  racersLoading = false,
+  racerLoadError = null,
   submitting = false,
+  onRaceChange,
   onSubmit,
 }: PredictionFormProps) => {
   const { theme } = useAppTheme();
@@ -48,8 +54,8 @@ export const PredictionForm = ({
   const [selectedRaceId, setSelectedRaceId] = useState<string>("");
   const [selectedRacerId, setSelectedRacerId] = useState<string>("");
   const [gridPosition, setGridPosition] = useState<string>("8");
-  const [recentFormScore, setRecentFormScore] = useState<string>("72");
   const [weatherCondition, setWeatherCondition] = useState<WeatherCondition>("Dry");
+  const [racerSearch, setRacerSearch] = useState<string>("");
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -62,6 +68,20 @@ export const PredictionForm = ({
     () => races.filter((race) => race.season === selectedSeason),
     [races, selectedSeason]
   );
+  const selectedSeasonMeta = useMemo(
+    () => seasons.find((season) => season.year === selectedSeason),
+    [seasons, selectedSeason]
+  );
+  const selectedRace = useMemo(
+    () => racesForSeason.find((race) => race.id === selectedRaceId),
+    [racesForSeason, selectedRaceId]
+  );
+  const supportMessage =
+    selectedRace?.predictionSupport === "historical_estimate"
+      ? selectedRace.supportMessage
+      : selectedSeasonMeta?.predictionSupport === "historical_estimate"
+        ? selectedSeasonMeta.supportMessage
+        : null;
 
   useEffect(() => {
     if (selectedRaceId && !racesForSeason.find((race) => race.id === selectedRaceId)) {
@@ -70,14 +90,29 @@ export const PredictionForm = ({
   }, [racesForSeason, selectedRaceId]);
 
   useEffect(() => {
-    if (selectedRacerId && !racers.find((racer) => racer.id === selectedRacerId)) {
+    if (selectedRacerId && !availableRacers.find((racer) => racer.id === selectedRacerId)) {
       setSelectedRacerId("");
     }
-  }, [racers, selectedRacerId]);
+  }, [availableRacers, selectedRacerId]);
+
+  const filteredRacers = useMemo(() => {
+    const needle = racerSearch.trim().toLowerCase();
+    if (!needle) {
+      return availableRacers;
+    }
+
+    return availableRacers.filter((racer) => {
+      const haystack = `${racer.name} ${racer.team}`.toLowerCase();
+      return haystack.includes(needle);
+    });
+  }, [availableRacers, racerSearch]);
+  const selectedRacer = useMemo(
+    () => availableRacers.find((racer) => racer.id === selectedRacerId) ?? null,
+    [availableRacers, selectedRacerId]
+  );
 
   const submitForm = () => {
     const parsedGrid = Number(gridPosition);
-    const parsedForm = Number(recentFormScore);
 
     if (!selectedSeason || !selectedRaceId || !selectedRacerId) {
       setValidationMessage("Select season, race, and racer before running the prediction.");
@@ -89,11 +124,6 @@ export const PredictionForm = ({
       return;
     }
 
-    if (Number.isNaN(parsedForm) || parsedForm < 0 || parsedForm > 100) {
-      setValidationMessage("Recent form score must be between 0 and 100.");
-      return;
-    }
-
     setValidationMessage(null);
 
     onSubmit({
@@ -102,7 +132,6 @@ export const PredictionForm = ({
       racerId: selectedRacerId,
       gridPosition: clamp(parsedGrid, 1, 20),
       weatherCondition,
-      recentFormScore: clamp(parsedForm, 0, 100),
     });
   };
 
@@ -110,7 +139,7 @@ export const PredictionForm = ({
     <View style={styles.container}>
       <SectionHeader
         title="Prediction Sandbox"
-        subtitle="UI-only calculator wired to mock service responses."
+        subtitle="Interactive calculator wired to the backend prediction service."
       />
 
       <View style={styles.block}>
@@ -133,19 +162,40 @@ export const PredictionForm = ({
             value: race.id,
             helper: `${race.country} - ${race.circuit}`,
           }))}
-          onChange={setSelectedRaceId}
+          onChange={(nextRaceId) => {
+            setSelectedRaceId(nextRaceId);
+            setSelectedRacerId("");
+            setRacerSearch("");
+            onRaceChange?.(nextRaceId);
+          }}
           triggerTestID="race-select-trigger"
           optionTestIDPrefix="race-select-option-"
         />
       </View>
 
+      {supportMessage ? (
+        <View style={styles.supportBanner}>
+          <Text style={styles.supportTitle}>Historical estimate</Text>
+          <Text style={styles.supportText}>{supportMessage}</Text>
+        </View>
+      ) : null}
+
       <View style={styles.block}>
         <Text style={styles.label}>Racer</Text>
+        <TextInput
+          value={racerSearch}
+          onChangeText={setRacerSearch}
+          style={styles.input}
+          placeholder={selectedRaceId ? "Type racer name or team" : "Select race first"}
+          placeholderTextColor={theme.colors.textSecondary}
+          editable={Boolean(selectedRaceId) && !racersLoading}
+          testID="input-racer-search"
+        />
         <SelectMenu
           value={selectedRacerId}
           placeholder="Select racer"
           title="Select racer"
-          options={racers.map((racer) => ({
+          options={filteredRacers.map((racer) => ({
             label: racer.name,
             value: racer.id,
             helper: racer.team,
@@ -154,6 +204,11 @@ export const PredictionForm = ({
           triggerTestID="racer-select-trigger"
           optionTestIDPrefix="racer-select-option-"
         />
+        {racersLoading ? <Text style={styles.helperText}>Loading race-specific racers...</Text> : null}
+        {!racersLoading && racerLoadError ? <Text style={styles.validation}>{racerLoadError}</Text> : null}
+        {!racersLoading && !racerLoadError && selectedRaceId && filteredRacers.length === 0 ? (
+          <Text style={styles.helperText}>No racers found for this race/filter combination.</Text>
+        ) : null}
       </View>
 
       <View style={[styles.inputRow, isCompactWidth && styles.inputRowCompact]}>
@@ -172,16 +227,14 @@ export const PredictionForm = ({
         </View>
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Recent Form</Text>
-          <TextInput
-            value={recentFormScore}
-            onChangeText={setRecentFormScore}
-            keyboardType="number-pad"
-            style={styles.input}
-            testID="input-form-score"
-            maxLength={3}
-            placeholder="0 - 100"
-            placeholderTextColor={theme.colors.textSecondary}
-          />
+          <View style={styles.derivedValueCard}>
+            <Text style={styles.derivedValueText}>
+              {selectedRacer?.recentFormScore ?? "--"}
+            </Text>
+            <Text style={styles.derivedValueHint}>
+              Derived from recent rolling points and Top-10 history.
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -264,6 +317,28 @@ const createStyles = (theme: AppTheme) =>
       fontSize: theme.typeScale.body,
       color: theme.colors.textPrimary,
     },
+    derivedValueCard: {
+      minHeight: 44,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.radius.md,
+      backgroundColor: theme.colors.surfaceMuted,
+      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: theme.spacing.xs,
+      justifyContent: "center",
+      gap: theme.spacing.xs,
+    },
+    derivedValueText: {
+      fontFamily: fontFamily.bodyBold,
+      color: theme.colors.textPrimary,
+      fontSize: theme.typeScale.body,
+    },
+    derivedValueHint: {
+      fontFamily: fontFamily.bodyRegular,
+      color: theme.colors.textSecondary,
+      fontSize: theme.typeScale.caption,
+      lineHeight: 18,
+    },
     weatherRow: {
       flexDirection: "row",
       flexWrap: "wrap",
@@ -300,6 +375,31 @@ const createStyles = (theme: AppTheme) =>
       fontFamily: fontFamily.bodySemi,
       color: theme.colors.error,
       fontSize: theme.typeScale.bodySmall,
+    },
+    helperText: {
+      fontFamily: fontFamily.bodyRegular,
+      color: theme.colors.textSecondary,
+      fontSize: theme.typeScale.bodySmall,
+    },
+    supportBanner: {
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.radius.md,
+      backgroundColor: theme.colors.surfaceMuted,
+      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: theme.spacing.sm,
+      gap: theme.spacing.xs,
+    },
+    supportTitle: {
+      fontFamily: fontFamily.bodyBold,
+      color: theme.colors.textPrimary,
+      fontSize: theme.typeScale.bodySmall,
+    },
+    supportText: {
+      fontFamily: fontFamily.bodyRegular,
+      color: theme.colors.textSecondary,
+      fontSize: theme.typeScale.bodySmall,
+      lineHeight: 20,
     },
     submitButton: {
       backgroundColor: theme.colors.accent,

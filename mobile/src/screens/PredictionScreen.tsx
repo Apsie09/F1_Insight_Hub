@@ -12,15 +12,14 @@ import { APP_TAB_BAR_HEIGHT } from "../constants/layout";
 import { fontFamily } from "../constants/theme";
 import type { AppTheme } from "../constants/theme";
 import { useAsyncResource } from "../hooks/useAsyncResource";
-import { predictionService } from "../services/mockApi";
+import { predictionService } from "../services/predictionService";
 import { useAppTheme } from "../theme/AppThemeProvider";
-import type { CalculatorInput, CalculatorResult } from "../types/domain";
+import type { CalculatorInput, CalculatorResult, RacerProfile } from "../types/domain";
 import { formatPercent } from "../utils/format";
 
 type PredictionPayload = {
   seasons: Awaited<ReturnType<typeof predictionService.getSeasons>>;
   races: Awaited<ReturnType<typeof predictionService.getAllRaces>>;
-  racers: Awaited<ReturnType<typeof predictionService.getRacers>>;
 };
 
 export const PredictionScreen = () => {
@@ -29,6 +28,9 @@ export const PredictionScreen = () => {
   const [submitPending, setSubmitPending] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [result, setResult] = useState<CalculatorResult | null>(null);
+  const [availableRacers, setAvailableRacers] = useState<RacerProfile[]>([]);
+  const [racersLoading, setRacersLoading] = useState(false);
+  const [racerLoadError, setRacerLoadError] = useState<string | null>(null);
   const tabBarHeight = APP_TAB_BAR_HEIGHT;
   const insets = useSafeAreaInsets();
 
@@ -42,16 +44,15 @@ export const PredictionScreen = () => {
   );
 
   const fetchPayload = useCallback(async (): Promise<PredictionPayload> => {
-    const [seasonData, raceData, racerData] = await Promise.all([
+    const [seasonData, raceData] = await Promise.all([
       predictionService.getSeasons(),
       predictionService.getAllRaces(),
-      predictionService.getRacers(),
     ]);
-    return { seasons: seasonData, races: raceData, racers: racerData };
+    return { seasons: seasonData, races: raceData };
   }, []);
 
   const resource = useAsyncResource(fetchPayload, {
-    isEmpty: (value) => value.seasons.length === 0 || value.races.length === 0 || value.racers.length === 0,
+    isEmpty: (value) => value.seasons.length === 0 || value.races.length === 0,
   });
 
   const handleSubmit = async (input: CalculatorInput) => {
@@ -67,6 +68,31 @@ export const PredictionScreen = () => {
       setSubmitPending(false);
     }
   };
+
+  const handleRaceChange = useCallback(
+    async (raceId: string) => {
+      setResult(null);
+      setSubmitError(null);
+      setRacerLoadError(null);
+
+      if (!raceId) {
+        setAvailableRacers([]);
+        return;
+      }
+
+      setRacersLoading(true);
+      try {
+        const participants = await predictionService.getRaceParticipants(raceId);
+        setAvailableRacers(participants);
+      } catch (error) {
+        setAvailableRacers([]);
+        setRacerLoadError(error instanceof Error ? error.message : "Unable to load racers for this race.");
+      } finally {
+        setRacersLoading(false);
+      }
+    },
+    []
+  );
 
   if (resource.status === "loading" || resource.status === "idle") {
     return (
@@ -89,7 +115,7 @@ export const PredictionScreen = () => {
       <View style={[styles.stateContainer, contentInsets]}>
         <EmptyState
           title="Calculator feed empty"
-          message="Seasons, races, or racers are missing in mocked fixtures."
+          message="Seasons, races, or racers are missing in the backend response."
           actionLabel="Reload"
           onAction={resource.refresh}
         />
@@ -110,19 +136,35 @@ export const PredictionScreen = () => {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
       >
-        <SectionHeader title="Prediction Calculator" subtitle="UI-only form with mocked model response." />
+        <SectionHeader title="Prediction Calculator" subtitle="Interactive form backed by the backend prediction API." />
         <PredictionForm
           seasons={resource.data.seasons}
           races={resource.data.races}
-          racers={resource.data.racers}
+          availableRacers={availableRacers}
+          racersLoading={racersLoading}
+          racerLoadError={racerLoadError}
           submitting={submitPending}
+          onRaceChange={handleRaceChange}
           onSubmit={handleSubmit}
         />
 
         {submitError ? <ErrorState message={submitError} /> : null}
 
         {result ? (
-          <InfoCard title="Mock Prediction Result" value={`${formatPercent(result.predictedTop10Probability)} Top-10`}>
+          <InfoCard title="Prediction Result" value={`${formatPercent(result.predictedTop10Probability)} Top-10`}>
+            {result.predictionSupport === "historical_estimate" && result.supportMessage ? (
+              <View
+                style={[
+                  styles.supportBanner,
+                  styles.supportBannerHistorical,
+                ]}
+              >
+                <Text style={styles.supportTitle}>
+                  Historical estimate
+                </Text>
+                <Text style={styles.supportText}>{result.supportMessage}</Text>
+              </View>
+            ) : null}
             <Text style={styles.resultMeta}>
               {result.racerName} - Confidence: {result.confidence}
             </Text>
@@ -138,7 +180,7 @@ export const PredictionScreen = () => {
         ) : (
           <InfoCard title="Result Placeholder">
             <Text style={styles.placeholderText}>
-              Submit the form to preview mocked prediction confidence and reasoning cards.
+              Submit the form to preview backend prediction confidence and reasoning cards.
             </Text>
           </InfoCard>
         )}
@@ -176,6 +218,30 @@ const createStyles = (theme: AppTheme) =>
       fontFamily: fontFamily.bodySemi,
       color: theme.colors.textPrimary,
       fontSize: theme.typeScale.body,
+    },
+    supportBanner: {
+      marginBottom: theme.spacing.sm,
+      borderRadius: theme.radius.md,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surfaceMuted,
+      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: theme.spacing.sm,
+      gap: theme.spacing.xs,
+    },
+    supportBannerHistorical: {
+      borderColor: theme.colors.warning,
+    },
+    supportTitle: {
+      fontFamily: fontFamily.bodyBold,
+      color: theme.colors.textPrimary,
+      fontSize: theme.typeScale.bodySmall,
+    },
+    supportText: {
+      fontFamily: fontFamily.bodyRegular,
+      color: theme.colors.textSecondary,
+      fontSize: theme.typeScale.bodySmall,
+      lineHeight: 20,
     },
     reasoningList: {
       marginTop: theme.spacing.sm,

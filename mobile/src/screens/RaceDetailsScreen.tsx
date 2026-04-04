@@ -14,7 +14,7 @@ import { APP_TAB_BAR_HEIGHT } from "../constants/layout";
 import { fontFamily } from "../constants/theme";
 import type { AppTheme } from "../constants/theme";
 import { useAsyncResource } from "../hooks/useAsyncResource";
-import { predictionService } from "../services/mockApi";
+import { predictionService } from "../services/predictionService";
 import { useAppTheme } from "../theme/AppThemeProvider";
 import type { RaceDetailsParams } from "../types/navigation";
 import { formatDate } from "../utils/format";
@@ -82,7 +82,7 @@ export const RaceDetailsScreen = ({ route, navigation }: RaceDetailsScreenProps)
       <View style={[styles.stateContainer, contentInsets]}>
         <EmptyState
           title="No Top-10 entries"
-          message="Prediction rows are empty for this race in the current mock scenario."
+          message="Prediction rows are empty for this race in the current backend response."
           actionLabel="Reload"
           onAction={resource.refresh}
         />
@@ -132,7 +132,7 @@ export const RaceDetailsScreen = ({ route, navigation }: RaceDetailsScreenProps)
           }
         />
 
-        <SectionHeader title="Race Context Blocks" subtitle="Additional telemetry assumptions from the mock feed." />
+        <SectionHeader title="Race Context Blocks" subtitle="Additional telemetry assumptions from the backend feed." />
         <InfoCard title="Strategic Notes">
           {context.notes.map((note, index) => (
             <View key={`${note}-${index}`} style={styles.noteRow}>

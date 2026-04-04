@@ -12,7 +12,7 @@ import { APP_TAB_BAR_HEIGHT } from "../constants/layout";
 import { fontFamily } from "../constants/theme";
 import type { AppTheme } from "../constants/theme";
 import { useAsyncResource } from "../hooks/useAsyncResource";
-import { predictionService } from "../services/mockApi";
+import { predictionService } from "../services/predictionService";
 import { useAppTheme } from "../theme/AppThemeProvider";
 import type { HomeStackParamList } from "../types/navigation";
 
@@ -93,7 +93,7 @@ export const HomeScreen = ({ navigation }: HomeScreenProps) => {
           <Text style={styles.heroTag}>Telemetry Motorsport UI</Text>
           <Text style={[styles.heroTitle, isCompactWidth && styles.heroTitleCompact]}>F1 Insight Hub</Text>
           <Text style={styles.heroSubtitle}>
-            Browse races by season, inspect mock Top-10 projections, and explore racer-level context.
+            Browse races by season, inspect Top-10 projections, and explore racer-level context.
           </Text>
           <View style={[styles.heroActions, isCompactWidth && styles.heroActionsCompact]}>
             <Pressable style={styles.primaryButton} onPress={openBrowse} testID="home-open-browse">

@@ -16,6 +16,7 @@ This architecture is intended to provide:
 The database design is no longer just conceptual. The following parts are implemented:
 
 - SQLAlchemy ORM models
+- Alembic migration environment
 - schema initialization script
 - archive ingestion script
 - prediction publishing script
@@ -258,7 +259,8 @@ Constraint intent:
 
 Responsibility:
 
-- create schema from ORM models
+- upgrade an empty database to Alembic head
+- stamp an already-existing schema to the current Alembic revision when needed
 
 ### `backend/ingest_archive.py`
 
@@ -357,7 +359,7 @@ SQLite remains acceptable only for:
 
 ## Remaining Gaps
 
-- Alembic migrations are not set up yet
 - secrets/env handling is still manual
 - scheduled ingestion/publish automation is not set up
 - legacy fallback serving path still exists and should be minimized over time
+- only the initial Alembic revision exists so far

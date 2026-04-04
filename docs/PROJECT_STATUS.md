@@ -66,6 +66,7 @@ Current backend architecture:
 - `backend/legacy_state.py`: isolated legacy fallback state
 - `backend/models.py`: SQLAlchemy ORM models
 - `backend/database.py`: engine and session setup
+- `backend/alembic/`: schema migration environment
 
 Current backend capabilities:
 
@@ -105,6 +106,12 @@ Implemented scripts:
 - `backend/init_db.py`
 - `backend/ingest_archive.py`
 - `backend/publish_predictions.py`
+
+Migration support:
+
+- Alembic is configured under `backend/alembic/`
+- `backend/init_db.py` upgrades an empty database to head
+- `backend/init_db.py` stamps an already-existing schema to the current revision when needed
 
 Current usage pattern:
 
@@ -231,14 +238,14 @@ EXPO_PUBLIC_API_BASE_URL=http://127.0.0.1:8000 npx expo start --web --clear
 - Expo Go compatibility on iPhone may lag behind the SDK version used by the project
 - DNF model is not integrated
 - calculator adjustments are still heuristic scenario overrides, not a second trained model layer
-- Alembic migrations are not set up yet
+- Alembic is configured, but only the initial schema revision exists so far
 - backend still contains a legacy fallback path that should eventually be reduced further
 
 ## Recommended Next Steps
 
 ### High Priority
 
-1. add Alembic migrations
+1. add follow-up migrations as the schema evolves
 2. formalize backend env loading instead of manual exports
 3. tighten the calculator semantics around scenario overrides
 

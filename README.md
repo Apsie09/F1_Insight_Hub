@@ -139,7 +139,7 @@ pip install -r requirements.txt
 
 SQLite works for local bootstrap, but PostgreSQL is the intended main path.
 
-Initialize schema:
+Initialize or migrate schema:
 
 ```bash
 python init_db.py
@@ -239,5 +239,5 @@ More detailed project documents:
 
 - DNF model is not production-ready
 - prediction explanations are still lightweight and not SHAP-backed in the mobile UI
-- Alembic migrations are not set up yet
+- Alembic is configured, but migration history currently contains only the initial serving schema revision
 - backend still carries a legacy fallback path for non-DB serving, although normal mode is DB-first

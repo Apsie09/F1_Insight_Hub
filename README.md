@@ -1,221 +1,243 @@
 # F1 Insight Hub
 
-F1 Insight Hub is a cross-platform mobile experience for Formula 1 race exploration and Top-10 race prediction viewing.
+F1 Insight Hub is a cross-platform Formula 1 application that combines race exploration, driver context, and ML-backed Top-10 finish probabilities.
 
-Current repository status:
-- `mobile/`: implemented React Native frontend (UI-only, mock data, no backend calls).
-- `ml/`: separate ML experimentation/training assets.
-- `backend/`: not implemented yet (currently placeholder).
+## Current Architecture
 
-## Frontend Implementation Status (Done)
+The project currently has three active parts:
 
-The mobile UI is implemented with Expo + TypeScript and includes:
-- Home screen with branding and quick actions.
-- Season/year race browser with year chips and race cards.
-- Race details with race metadata and predicted Top-10 list.
-- Racer details with profile, stats, and selected-race context.
-- Prediction calculator screen (UI-only) with mocked response.
-- App-wide dark/light theme switch in the header.
-- Smooth theme transition animation (with reduced-motion accessibility support).
-- Left/right finger swipe between main sections (`Home`, `Browse`, `Prediction`).
-- Loading / Empty / Error / Success states.
-- Reusable component structure and typed service contracts.
+- `mobile/`: Expo + React Native client
+- `backend/`: FastAPI service
+- `ml/`: model artifacts, notebooks, and feature engineering assets
 
-Important scope note: backend, database, and ML inference are intentionally not implemented in the mobile app. All data currently comes from a local mock service.
+The serving architecture is now database-first:
 
-## Mobile Tech Stack
+- raw archive CSVs, feature parquet, and saved model artifacts remain the ML input layer
+- ingestion and publish scripts load app-serving data into PostgreSQL
+- the FastAPI backend serves the mobile app from PostgreSQL in normal mode
 
-- Expo SDK 55
-- React Native 0.83
-- React 19
-- React Native Web
-- TypeScript
-- React Navigation (material top tabs positioned at bottom + native stack)
-- Jest + React Native Testing Library
+## What Works Now
 
-## Prerequisites
+- mobile app screens are implemented:
+  - home
+  - race browser
+  - race details
+  - racer details
+  - prediction calculator
+- FastAPI backend is implemented and connected to the mobile app
+- Top-10 XGBoost model is integrated into backend-serving flows
+- PostgreSQL serving layer is implemented
+- race participants, race predictions, and racer context are persisted in the database
+- historical seasons outside the validated model window are labeled as `Historical estimate`
 
-- Node.js `>= 20.19.4` (recommended: `20.19.4`)
-- npm `>= 10`
-- Expo CLI via `npx` (no global install required)
-
-## Mobile Project Structure
+## Repository Structure
 
 ```text
-mobile/
-  src/
-    components/
-    constants/
-    data/
-    hooks/
-    navigation/
-    screens/
-    services/
-    types/
-    utils/
-    __tests__/
+F1_Insight_Hub/
+  backend/
+  docs/
+  ml/
+  mobile/
+  README.md
 ```
 
-## Mobile Dependencies
+## ML Scope
 
-From `mobile/package.json`:
+Integrated model:
 
-### Runtime dependencies
-- `@expo-google-fonts/barlow-condensed` `^0.4.1`
-- `@expo-google-fonts/source-sans-3` `^0.4.1`
-- `@expo/vector-icons` `^15.1.1`
-- `@react-navigation/material-top-tabs` `^7.4.21`
-- `@react-navigation/native` `^7.1.33`
-- `@react-navigation/native-stack` `^7.14.4`
-- `expo` `~55.0.6`
-- `expo-font` `~55.0.4`
-- `expo-status-bar` `~55.0.4`
-- `react` `19.2.0`
-- `react-dom` `19.2.0`
-- `react-native` `0.83.2`
-- `react-native-gesture-handler` `~2.30.0`
-- `react-native-pager-view` `8.0.0`
-- `react-native-safe-area-context` `~5.6.2`
-- `react-native-screens` `~4.23.0`
-- `react-native-tab-view` `^4.3.0`
-- `react-native-web` `^0.21.0`
+- task: Top-10 finish probability
+- model: XGBoost classifier
+- training window: `2006-2021`
+- validation year: `2022`
+- test years: `2023+`
 
-### Dev dependencies
-- `@testing-library/jest-native` `^5.4.3`
-- `@testing-library/react-native` `^13.3.3`
-- `@types/jest` `29.5.14`
-- `@types/react` `~19.2.2`
-- `@types/react-test-renderer` `^19.1.0`
-- `jest` `^29.7.0`
-- `jest-expo` `~55.0.11`
-- `react-test-renderer` `^19.2.0`
-- `typescript` `~5.9.2`
+Practical implication:
 
-## Run Frontend Locally
+- `2006+` seasons are within the validated support window
+- older seasons can still be explored, but predictions are surfaced as historical estimates rather than validated outputs
+
+Current status of DNF modeling:
+
+- explored experimentally
+- not integrated into production app flows
+
+## Data Flow
+
+### Raw / ML Inputs
+
+The ML pipeline uses assets outside the repo root:
+
+- `../Data_Science_and_ML_part/data/archive/`
+- `../Data_Science_and_ML_part/data/feature_df.parquet`
+- `../Data_Science_and_ML_part/artifacts/top10_pipeline.joblib`
+- `../Data_Science_and_ML_part/artifacts/top10_metadata.json`
+
+These are used for:
+
+- feature generation
+- batch prediction publishing
+- model metadata loading
+
+### Database Serving Layer
+
+The backend now persists app-serving data in PostgreSQL:
+
+- `seasons`
+- `races`
+- `drivers`
+- `constructors`
+- `race_context`
+- `race_participants`
+- `model_versions`
+- `race_predictions`
+- `racer_race_context`
+
+## Backend Endpoints
+
+Current API endpoints:
+
+- `GET /`
+- `GET /seasons`
+- `GET /seasons/{year}/races`
+- `GET /races`
+- `GET /races/featured`
+- `GET /races/{race_id}`
+- `GET /races/{race_id}/participants`
+- `GET /races/{race_id}/predictions/top10`
+- `GET /races/{race_id}/racers/{racer_id}`
+- `GET /racers`
+- `POST /predictions/calculate`
+
+## Prediction Calculator Behavior
+
+The calculator is model-grounded but still supports light scenario overrides.
+
+Base value:
+
+- backend looks up the selected race-driver prediction row from the database
+- base probability comes from the stored Top-10 model output
+
+Scenario overrides:
+
+- user can override `gridPosition`
+- user can select `weatherCondition`
+
+Backend-derived context:
+
+- `recentFormScore` is derived from rolling historical model features and served from the backend
+
+## Run Locally
+
+### 1. Backend dependencies
+
+```bash
+cd backend
+pip install -r requirements.txt
+```
+
+### 2. Database initialization and loading
+
+SQLite works for local bootstrap, but PostgreSQL is the intended main path.
+
+Initialize schema:
+
+```bash
+python init_db.py
+```
+
+Load archive-backed entities:
+
+```bash
+python ingest_archive.py
+```
+
+Publish Top-10 participants, predictions, and racer context:
+
+```bash
+python publish_predictions.py
+```
+
+### 3. Run backend in DB-first mode
+
+```bash
+cd backend
+
+export DATABASE_URL="postgresql+psycopg://f1_user:<password>@localhost:5432/f1_insight_hub"
+export DB_ECHO=false
+export F1_SERVING_MODE=db
+export F1_ENABLE_LEGACY_FALLBACK=false
+
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### 4. Run mobile app
+
+Install dependencies:
 
 ```bash
 cd mobile
 npm install
-npm run start
 ```
 
-Useful scripts:
-- `npm run android`
-- `npm run ios`
-- `npm run web`
-- `npm run test`
-- `npm run test:watch`
-
-Dependency compatibility check:
+Web:
 
 ```bash
-cd mobile
-npx expo install --check
+EXPO_PUBLIC_API_BASE_URL=http://127.0.0.1:8000 npx expo start --web --clear
 ```
 
-Type-check:
+Android emulator:
 
 ```bash
-cd mobile
-npx tsc --noEmit
+EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:8000 npx expo start --android --clear
 ```
 
-## Quick Troubleshooting
+Physical phone on same Wi-Fi:
 
-1. If Expo warns about incompatible packages, run:
-   - `cd mobile`
-   - `npx expo install --check`
-2. If you see missing web dependencies (`react-dom` / `react-native-web`), run:
-   - `cd mobile`
-   - `npx expo install react-dom react-native-web`
-3. If you see Node engine warnings from React Native packages:
-   - ensure `node -v` is at least `20.19.4`
+```bash
+EXPO_PUBLIC_API_BASE_URL=http://<your-laptop-lan-ip>:8000 npx expo start --clear
+```
 
-## Backend Developer Handoff
+Important:
 
-The frontend currently calls a mock service in `mobile/src/services/mockApi.ts`.
-Backend should replace this mock with real HTTP calls while keeping equivalent method contracts.
+- Expo Go support depends on the SDK compatibility available on the device platform
+- backend must listen on `0.0.0.0` for phone testing
 
-### Frontend service methods to back with API
+## Tech Stack
 
-1. `getSeasons()`
-2. `getRacesBySeason(season)`
-3. `getAllRaces()`
-4. `getFeaturedRaces()`
-5. `getRaceDetails(raceId)`
-6. `getTop10Prediction(raceId)`
-7. `getRacerDetails(racerId, raceId)`
-8. `getRacers()`
-9. `calculatePrediction(input)`
+### Mobile
 
-### Suggested REST mapping
+- Expo SDK 55
+- React Native
+- React Navigation
+- TypeScript
 
-1. `GET /seasons`
-2. `GET /seasons/{year}/races`
-3. `GET /races`
-4. `GET /races/featured`
-5. `GET /races/{raceId}`
-6. `GET /races/{raceId}/predictions/top10`
-7. `GET /races/{raceId}/racers/{racerId}`
-8. `GET /racers`
-9. `POST /predictions/calculate`
+### Backend
 
-### Required response payloads (TypeScript contracts)
+- FastAPI
+- SQLAlchemy
+- PostgreSQL
+- pandas
+- joblib
+- scikit-learn
+- xgboost
 
-Defined in:
-- `mobile/src/types/domain.ts`
-- `mobile/src/types/services.ts`
+### ML
 
-Core entities expected by UI:
-- `Season`
-- `Race`
-- `RaceContext`
-- `Top10PredictionEntry`
-- `RacerProfile`
-- `RacerRaceContext`
-- `CalculatorInput`
-- `CalculatorResult`
+- pandas
+- scikit-learn
+- xgboost
+- matplotlib
 
-### Behavior expectations for backend responses
+## Documentation
 
-- Return data sorted in a stable way where relevant:
-  - Seasons descending by year.
-  - Races by round within season.
-  - Top-10 predictions by rank ascending.
-- Preserve IDs as stable strings (`raceId`, `racerId`) because they drive navigation.
-- Return explicit non-200 error bodies for failed requests so UI can surface meaningful error messages.
-- `calculatePrediction` should return a confidence + reasoning payload even if inference is provisional.
+More detailed project documents:
 
-### Notes for backend and ML integration
+- `docs/PROJECT_STATUS.md`
+- `docs/DATABASE_DESIGN.md`
 
-- Frontend is already structured for async loading, empty, and error states.
-- Backend can be integrated by swapping mock service implementations only, without screen rewrites.
-- ML model output should be adapted to `Top10PredictionEntry` and `CalculatorResult` shapes.
-- The placeholder explanation panels in racer/prediction screens are ready for richer model interpretation content later.
+## Current Gaps
 
-## Mocking and State Simulation
-
-For UI testing/demo, mock endpoint scenarios are supported:
-- `success`
-- `empty`
-- `error`
-
-Controls are exposed in `mobile/src/services/mockApi.ts`:
-- `setEndpointScenario(endpoint, scenario)`
-- `resetMockScenarios()`
-- `setMockLatency(ms)`
-
-## What Is Not Implemented (By Design)
-
-- Backend/API server
-- Database logic
-- ML training/inference runtime in the mobile app
-- Auth
-- Native phone integrations (camera, notifications, sensors, geolocation, etc.)
-
-## ML Context
-
-ML research/training assets are available under:
-- `ml/top10_xgboost/`
-
-This remains separate from the mobile implementation. The frontend only expects prediction-ready payloads from backend endpoints.
+- DNF model is not production-ready
+- prediction explanations are still lightweight and not SHAP-backed in the mobile UI
+- Alembic migrations are not set up yet
+- backend still carries a legacy fallback path for non-DB serving, although normal mode is DB-first

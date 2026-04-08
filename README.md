@@ -1,36 +1,21 @@
 # F1 Insight Hub
 
-F1 Insight Hub is a cross-platform Formula 1 application that combines race exploration, driver context, and ML-backed Top-10 finish probabilities.
+F1 Insight Hub is a cross-platform Formula 1 application with a React Native mobile app, a FastAPI backend, and an ML feature/prediction pipeline.
 
-## Current Architecture
+## Architecture Overview
 
-The project currently has three active parts:
+- `mobile/`: Expo + React Native + TypeScript client.
+- `backend/`: FastAPI + SQLAlchemy service, DB-first serving.
+- `ml/`: model artifacts and data science pipeline assets.
 
-- `mobile/`: Expo + React Native client
-- `backend/`: FastAPI service
-- `ml/`: model artifacts, notebooks, and feature engineering assets
+Main runtime flow:
 
-The serving architecture is now database-first:
+1. Mobile app calls backend REST API.
+2. Backend reads serving data from SQLite/PostgreSQL.
+3. Prediction calculator uses stored model outputs + lightweight scenario adjustments.
+4. Login/register uses DB-backed `app_users` table.
 
-- raw archive CSVs, feature parquet, and saved model artifacts remain the ML input layer
-- ingestion and publish scripts load app-serving data into PostgreSQL
-- the FastAPI backend serves the mobile app from PostgreSQL in normal mode
-
-## What Works Now
-
-- mobile app screens are implemented:
-  - home
-  - race browser
-  - race details
-  - racer details
-  - prediction calculator
-- FastAPI backend is implemented and connected to the mobile app
-- Top-10 XGBoost model is integrated into backend-serving flows
-- PostgreSQL serving layer is implemented
-- race participants, race predictions, and racer context are persisted in the database
-- historical seasons outside the validated model window are labeled as `Historical estimate`
-
-## Repository Structure
+## Repository Layout
 
 ```text
 F1_Insight_Hub/
@@ -41,46 +26,11 @@ F1_Insight_Hub/
   README.md
 ```
 
-## ML Scope
+## Database Integration (Python + TypeScript)
 
-Integrated model:
+The project already uses a shared backend DB serving layer consumed by TypeScript mobile services.
 
-- task: Top-10 finish probability
-- model: XGBoost classifier
-- training window: `2006-2021`
-- validation year: `2022`
-- test years: `2023+`
-
-Practical implication:
-
-- `2006+` seasons are within the validated support window
-- older seasons can still be explored, but predictions are surfaced as historical estimates rather than validated outputs
-
-Current status of DNF modeling:
-
-- explored experimentally
-- not integrated into production app flows
-
-## Data Flow
-
-### Raw / ML Inputs
-
-The ML pipeline uses assets outside the repo root:
-
-- `../Data_Science_and_ML_part/data/archive/`
-- `../Data_Science_and_ML_part/data/feature_df.parquet`
-- `../Data_Science_and_ML_part/artifacts/top10_pipeline.joblib`
-- `../Data_Science_and_ML_part/artifacts/top10_metadata.json`
-
-These are used for:
-
-- feature generation
-- batch prediction publishing
-- model metadata loading
-
-### Database Serving Layer
-
-The backend now persists app-serving data in PostgreSQL:
+### Core serving tables
 
 - `seasons`
 - `races`
@@ -91,10 +41,24 @@ The backend now persists app-serving data in PostgreSQL:
 - `model_versions`
 - `race_predictions`
 - `racer_race_context`
+- `app_users` (added for login/register)
 
-## Backend Endpoints
+### Auth table
 
-Current API endpoints:
+`app_users` stores:
+
+- `id`
+- `email` (unique)
+- `display_name`
+- `password_hash` (Argon2)
+- `role`
+- `is_active`
+- `created_at`
+- `updated_at`
+
+## API Endpoints
+
+### Health and domain
 
 - `GET /`
 - `GET /seasons`
@@ -108,60 +72,118 @@ Current API endpoints:
 - `GET /racers`
 - `POST /predictions/calculate`
 
-## Prediction Calculator Behavior
+### Auth
 
-The calculator is model-grounded but still supports light scenario overrides.
+- `POST /auth/register`
+- `POST /auth/login`
 
-Base value:
+## Mobile Login UX (Implemented)
 
-- backend looks up the selected race-driver prediction row from the database
-- base probability comes from the stored Top-10 model output
+- Full-screen auth overlay appears before app interaction.
+- Modes: `Log In` and `Create Account`.
+- On success, overlay disappears and app unlocks.
+- Session is persisted with `expo-secure-store` (fallback handling included).
+- Backend mode: accounts are stored in DB with Argon2 password hashing.
+- Test mode: auth gate is bypassed unless `EXPO_PUBLIC_TEST_AUTH_GATE=enabled`.
 
-Scenario overrides:
+## Dependencies
 
-- user can override `gridPosition`
-- user can select `weatherCondition`
+## Local project dependencies (required)
 
-Backend-derived context:
+These should stay local to each project folder (`backend/`, `mobile/`, `ml/`).
 
-- `recentFormScore` is derived from rolling historical model features and served from the backend
+### Mobile (`mobile/package.json`)
 
-## Run Locally
+Key runtime dependencies:
 
-### 1. Backend dependencies
+- `expo ~55.0.12`
+- `react 19.2.0`
+- `react-native 0.83.4`
+- `@react-navigation/*`
+- `expo-secure-store ~55.0.12`
+
+Testing/dev dependencies include:
+
+- `jest`
+- `jest-expo ~55.0.14`
+- `@testing-library/react-native`
+- `typescript`
+
+### Backend (`backend/requirements.txt`)
+
+- `fastapi`
+- `uvicorn[standard]`
+- `sqlalchemy`
+- `alembic`
+- `psycopg[binary]`
+- `argon2-cffi`
+- `pandas`
+- `joblib`
+- `scikit-learn`
+- `xgboost`
+
+### ML (`ml/top10_xgboost/requirements.txt`)
+
+Install as needed for model/pipeline workflows.
+
+## Global tooling (optional)
+
+Industry-standard practice is:
+
+- Keep app/runtime dependencies local.
+- Keep only CLI/tooling global if desired.
+
+Global Expo CLI is optional. Current machine has:
+
+- `expo@55.0.12` globally.
+
+## Setup and Run
+
+### 1. Prerequisites
+
+- Node.js 20+
+- npm
+- Python 3.12+
+- PostgreSQL (optional but recommended for DB-first production-like runs)
+
+### 2. Install dependencies
+
+From repo root:
+
+```bash
+# Mobile
+cd mobile
+npm install
+
+# Backend
+cd ../backend
+python -m pip install -r requirements.txt
+
+# ML (optional for serving-only mobile/backend work)
+cd ../ml/top10_xgboost
+python -m pip install -r requirements.txt
+```
+
+### 3. Initialize/migrate backend DB
 
 ```bash
 cd backend
-pip install -r requirements.txt
-```
-
-### 2. Database initialization and loading
-
-SQLite works for local bootstrap, but PostgreSQL is the intended main path.
-
-Initialize or migrate schema:
-
-```bash
 python init_db.py
 ```
 
-Load archive-backed entities:
+### 4. Load data and publish predictions (if needed)
 
 ```bash
 python ingest_archive.py
-```
-
-Publish Top-10 participants, predictions, and racer context:
-
-```bash
 python publish_predictions.py
 ```
 
-### 3. Run backend in DB-first mode
+### 5. Run backend
 
 ```bash
 cd backend
 
+# Example PostgreSQL config
 export DATABASE_URL="postgresql+psycopg://f1_user:<password>@localhost:5432/f1_insight_hub"
 export DB_ECHO=false
 export F1_SERVING_MODE=db
@@ -170,74 +192,104 @@ export F1_ENABLE_LEGACY_FALLBACK=false
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### 4. Run mobile app
-
-Install dependencies:
+### 6. Run mobile app
 
 ```bash
 cd mobile
-npm install
-```
 
-Web:
-
-```bash
+# Web
 EXPO_PUBLIC_API_BASE_URL=http://127.0.0.1:8000 npx expo start --web --clear
-```
 
-Android emulator:
-
-```bash
+# Android emulator
 EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:8000 npx expo start --android --clear
-```
 
-Physical phone on same Wi-Fi:
-
-```bash
+# Physical device (same Wi-Fi)
 EXPO_PUBLIC_API_BASE_URL=http://<your-laptop-lan-ip>:8000 npx expo start --clear
 ```
 
-Important:
+## First Login Flow
 
-- Expo Go support depends on the SDK compatibility available on the device platform
-- backend must listen on `0.0.0.0` for phone testing
+1. Launch app.
+2. In auth overlay, choose `Create Account` for first-time user.
+3. Submit display name, email, password.
+4. Overlay closes on success.
+5. Session is persisted locally, so the overlay stays hidden until you use the header `Log out` button (top-right).
 
-## Tech Stack
+## Testing
 
 ### Mobile
 
-- Expo SDK 55
-- React Native
-- React Navigation
-- TypeScript
+```bash
+cd mobile
+npx tsc --noEmit
+npm test -- --runInBand
+```
 
 ### Backend
 
-- FastAPI
-- SQLAlchemy
-- PostgreSQL
-- pandas
-- joblib
-- scikit-learn
-- xgboost
+```bash
+cd backend
+python -m unittest discover -s tests -p "test_*.py" -v
+```
 
-### ML
+## Troubleshooting
 
-- pandas
-- scikit-learn
-- xgboost
-- matplotlib
+### `Failed to fetch` in app
 
-## Documentation
+Usually backend is not reachable from the selected platform host.
 
-More detailed project documents:
+- Web/iOS simulator: use `127.0.0.1`.
+- Android emulator: use `10.0.2.2`.
+- Physical device: use machine LAN IP and `--host 0.0.0.0` on backend.
 
-- `docs/PROJECT_STATUS.md`
-- `docs/DATABASE_DESIGN.md`
+### App shows empty seasons/races after login
 
-## Current Gaps
+If backend auth works but race feeds are empty/unseeded, the mobile app now auto-falls back to local fixtures for race browsing/prediction UI.
 
-- DNF model is not production-ready
-- prediction explanations are still lightweight and not SHAP-backed in the mobile UI
-- Alembic is configured, but migration history currently contains only the initial serving schema revision
-- backend still carries a legacy fallback path for non-DB serving, although normal mode is DB-first
+- This keeps the app usable while backend data ingestion is still pending.
+- To force strict API-only behavior (disable fallback), set:
+
+```bash
+EXPO_PUBLIC_DISABLE_MOCK_FALLBACK=true
+```
+
+### Login form does not appear
+
+The login overlay only shows while signed out.
+
+- If you already authenticated once, use the top-right header `Log out` button to reopen it.
+- On web, you can also clear local storage key `f1_insight_hub_auth_session`.
+
+### Backend returns empty lists
+
+Current local DB can be initialized but still empty for race feeds until data is ingested.
+
+```bash
+cd backend
+python init_db.py
+python ingest_archive.py
+python publish_predictions.py
+```
+
+If you intentionally run strict API mode and backend is empty, mobile will now show an explicit endpoint error.
+
+### Expo compatibility warning
+
+Run:
+
+```bash
+cd mobile
+npx expo install --check
+```
+
+If mismatches are reported, run `npx expo install <package>` for the listed packages.
+
+## Notes for Backend Developer
+
+- Mobile auth integration expects:
+  - `POST /auth/register` returning `{ token, user }`
+  - `POST /auth/login` returning `{ token, user }`
+- Passwords are expected to be securely hashed server-side (currently Argon2).
+- `token` is currently a lightweight session token placeholder for frontend gating and can be replaced with JWT + refresh strategy later.
+- Existing race/prediction endpoints remain unchanged.
+

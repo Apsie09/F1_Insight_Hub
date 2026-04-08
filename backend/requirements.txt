@@ -1,3 +1,4 @@
+argon2-cffi
 fastapi
 uvicorn[standard]
 pandas

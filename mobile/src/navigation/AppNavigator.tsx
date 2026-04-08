@@ -9,7 +9,7 @@ import {
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
-import { ThemeSwitch } from "../components/ThemeSwitch";
+import { HeaderActions } from "../components/HeaderActions";
 import { APP_TAB_BAR_HEIGHT } from "../constants/layout";
 import { HomeScreen } from "../screens/HomeScreen";
 import { PredictionScreen } from "../screens/PredictionScreen";
@@ -42,7 +42,7 @@ const HomeStackNavigator = () => {
         color: theme.colors.textPrimary,
       },
       headerTintColor: theme.colors.textPrimary,
-      headerRight: () => <ThemeSwitch />,
+      headerRight: () => <HeaderActions />,
     }),
     [theme]
   );
@@ -73,7 +73,7 @@ const BrowseStackNavigator = () => {
         color: theme.colors.textPrimary,
       },
       headerTintColor: theme.colors.textPrimary,
-      headerRight: () => <ThemeSwitch />,
+      headerRight: () => <HeaderActions />,
     }),
     [theme]
   );
@@ -108,7 +108,7 @@ const PredictionStackNavigator = () => {
         color: theme.colors.textPrimary,
       },
       headerTintColor: theme.colors.textPrimary,
-      headerRight: () => <ThemeSwitch />,
+      headerRight: () => <HeaderActions />,
     }),
     [theme]
   );
@@ -249,3 +249,4 @@ export const AppNavigator = () => {
     </NavigationContainer>
   );
 };
+

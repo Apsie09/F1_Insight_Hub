@@ -90,7 +90,7 @@ export const RaceBrowserScreen = ({ navigation }: RaceBrowserScreenProps) => {
       return (
         <EmptyState
           title="No seasons found"
-          message="Your mocked service returned zero seasons."
+          message="No seasons are available from the current data source."
           actionLabel="Retry"
           onAction={seasonsResource.refresh}
         />
@@ -173,3 +173,4 @@ const createStyles = (theme: AppTheme) =>
       paddingBottom: theme.spacing.lg,
     },
   });
+

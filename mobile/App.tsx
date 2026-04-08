@@ -1,4 +1,4 @@
-import "react-native-gesture-handler";
+﻿import "react-native-gesture-handler";
 
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
@@ -15,17 +15,23 @@ import { Animated, StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { AuthProvider, useAuth } from "./src/auth/AuthProvider";
+import { AuthOverlay } from "./src/components/AuthOverlay";
 import { lightTheme } from "./src/constants/theme";
 import { AppNavigator } from "./src/navigation/AppNavigator";
 import { AppThemeProvider, useAppTheme } from "./src/theme/AppThemeProvider";
 
 const ThemedApp = () => {
   const { isDark, transitionOpacity, transitionOverlayColor } = useAppTheme();
+  const { status } = useAuth();
+  const shouldRenderAuthGate =
+    process.env.NODE_ENV !== "test" || process.env.EXPO_PUBLIC_TEST_AUTH_GATE === "enabled";
 
   return (
     <View style={styles.themedRoot}>
       <StatusBar style={isDark ? "light" : "dark"} />
       <AppNavigator />
+      {shouldRenderAuthGate && status !== "signedIn" ? <AuthOverlay /> : null}
       <Animated.View
         pointerEvents="none"
         style={[
@@ -57,7 +63,9 @@ export default function App() {
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
         <AppThemeProvider>
-          <ThemedApp />
+          <AuthProvider>
+            <ThemedApp />
+          </AuthProvider>
         </AppThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

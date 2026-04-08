@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react-native";
+﻿import { fireEvent, render, screen } from "@testing-library/react-native";
 import renderer from "react-test-renderer";
 
 import App from "../../App";

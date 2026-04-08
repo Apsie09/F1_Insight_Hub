@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from secrets import token_urlsafe
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from auth import authenticate_user, create_user
 from config import DATA_ROOT, F1_SERVING_MODE, FEATURED_RACE_LIMIT, LEGACY_FALLBACK_ENABLED
 from database import get_db_session
 from db_queries import (
@@ -28,8 +30,8 @@ from db_queries import (
 )
 from helpers import confidence_label, support_message
 from legacy_state import BackendState
-from models import Driver, Race, RaceContext, RacerRaceContextRecord
-from schemas import CalculatorInputPayload
+from models import AppUser, Driver, Race, RaceContext, RacerRaceContextRecord
+from schemas import AuthResponsePayload, CalculatorInputPayload, LoginPayload, RegisterPayload
 
 
 state = BackendState()
@@ -71,6 +73,43 @@ def healthcheck() -> dict[str, Any]:
     }
 
 
+def serialize_auth_user(user: AppUser) -> dict[str, Any]:
+    return {
+        "id": user.id,
+        "email": user.email,
+        "displayName": user.display_name,
+    }
+
+
+def auth_success_response(user: AppUser) -> dict[str, Any]:
+    return {
+        "token": token_urlsafe(32),
+        "user": serialize_auth_user(user),
+    }
+
+
+@app.post("/auth/register", response_model=AuthResponsePayload, status_code=status.HTTP_201_CREATED)
+def register_user(payload: RegisterPayload, db: Session = Depends(get_db_session)) -> dict[str, Any]:
+    try:
+        user = create_user(
+            db,
+            email=payload.email,
+            password=payload.password,
+            display_name=payload.displayName,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+
+    return auth_success_response(user)
+
+
+@app.post("/auth/login", response_model=AuthResponsePayload)
+def login_user(payload: LoginPayload, db: Session = Depends(get_db_session)) -> dict[str, Any]:
+    user = authenticate_user(db, email=payload.email, password=payload.password)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password.")
+
+    return auth_success_response(user)
 @app.get("/seasons")
 def get_seasons(db: Session = Depends(get_db_session)) -> list[dict[str, Any]]:
     state.require_ready()
@@ -271,3 +310,9 @@ def calculate_prediction(payload: CalculatorInputPayload, db: Session = Depends(
             f"Weather scenario '{payload.weatherCondition}' applied a lightweight simulation penalty/boost for interactive use.",
         ],
     }
+
+
+
+
+
+

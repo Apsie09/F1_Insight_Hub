@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   CalculatorInput,
   CalculatorResult,
   Race,
@@ -8,6 +8,7 @@ import type {
   Season,
   Top10PredictionEntry,
 } from "./domain";
+import type { AuthResponse, LoginInput, RegisterInput } from "./auth";
 
 export type ServiceScenario = "success" | "empty" | "error";
 
@@ -42,4 +43,9 @@ export type PredictionService = {
   getRacerDetails(racerId: string, raceId: string): Promise<RacerDetailsResponse>;
   getRacers(): Promise<RacerProfile[]>;
   calculatePrediction(input: CalculatorInput): Promise<CalculatorResult>;
+};
+
+export type AuthService = {
+  login(input: LoginInput): Promise<AuthResponse>;
+  register(input: RegisterInput): Promise<AuthResponse>;
 };

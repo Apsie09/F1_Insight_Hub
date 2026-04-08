@@ -31,6 +31,28 @@ class ConfidenceLevel(str, Enum):
     HIGH = "High"
 
 
+class UserRole(str, Enum):
+    VIEWER = "viewer"
+    ADMIN = "admin"
+
+
+class AppUser(Base):
+    __tablename__ = "app_users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
+    display_name: Mapped[str] = mapped_column(String(80), nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[str] = mapped_column(String(32), nullable=False, default=UserRole.VIEWER.value)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        onupdate=utc_now,
+    )
+
 class Season(Base):
     __tablename__ = "seasons"
 
@@ -186,3 +208,4 @@ class RacePrediction(Base):
     driver: Mapped["Driver"] = relationship(back_populates="predictions")
     constructor: Mapped["Constructor | None"] = relationship(back_populates="predictions")
     model_version: Mapped["ModelVersion"] = relationship(back_populates="predictions")
+

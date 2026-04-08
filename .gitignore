@@ -8,6 +8,8 @@ __pycache__/
 .ruff_cache/
 .coverage
 htmlcov/
+.venv/
+backend/.venv/
 
 # Local environment files
 .env
@@ -19,7 +21,14 @@ backend/*.db
 backend/*.sqlite
 backend/*.sqlite3
 
+# Node dependencies
+mobile/node_modules/
+
 # Editor / OS noise
 .DS_Store
 .idea/
 .vscode/
+
+# Runtime logs
+backend/*.log
+mobile/*.log

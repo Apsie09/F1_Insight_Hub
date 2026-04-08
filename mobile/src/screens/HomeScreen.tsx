@@ -72,7 +72,7 @@ export const HomeScreen = ({ navigation }: HomeScreenProps) => {
       return (
         <EmptyState
           title="No season feed"
-          message="Mock season data is empty. Switch the service scenario to success to continue."
+          message="No season data is available from the current source. Seed backend race data or allow mock fallback."
           actionLabel="Reload"
           onAction={homeResource.refresh}
         />
@@ -281,3 +281,4 @@ const createStyles = (theme: AppTheme) =>
       gap: theme.spacing.sm,
     },
   });
+

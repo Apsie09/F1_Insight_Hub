@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
+﻿import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 
 import App from "../../App";
 
@@ -54,11 +54,10 @@ describe("F1 Insight Hub app flow", () => {
     fireEvent.press(await screen.findByTestId("racer-select-option-max_verstappen"));
 
     fireEvent.changeText(screen.getByTestId("input-grid-position"), "2");
-    fireEvent.changeText(screen.getByTestId("input-form-score"), "88");
     fireEvent.press(screen.getByTestId("weather-chip-Dry"));
     fireEvent.press(screen.getByTestId("calc-submit-btn"));
 
-    expect(await screen.findByText("Mock Prediction Result")).toBeOnTheScreen();
+    expect(await screen.findByText("Prediction Result")).toBeOnTheScreen();
     expect(await screen.findByText(/Confidence:/)).toBeOnTheScreen();
   });
 });

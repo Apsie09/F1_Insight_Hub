@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
 
+import { loadStoredAuthSession } from "../auth/sessionStorage";
 import type { CalculatorInput } from "../types/domain";
 import type {
   PredictionService,
@@ -58,8 +59,20 @@ const extractErrorMessage = async (response: Response): Promise<string> => {
   return `${response.status} ${response.statusText || "Request failed"}`.trim();
 };
 
+const withAuthorizationHeader = async (headers?: HeadersInit): Promise<Headers> => {
+  const resolvedHeaders = new Headers(headers);
+  const storedSession = await loadStoredAuthSession();
+  if (storedSession?.token && !resolvedHeaders.has("Authorization")) {
+    resolvedHeaders.set("Authorization", `Bearer ${storedSession.token}`);
+  }
+  return resolvedHeaders;
+};
+
 const requestJson = async <T>(input: RequestInfo, init?: RequestInit): Promise<T> => {
-  const response = await fetch(input, init);
+  const response = await fetch(input, {
+    ...init,
+    headers: await withAuthorizationHeader(init?.headers),
+  });
   if (!response.ok) {
     throw new Error(await extractErrorMessage(response));
   }

@@ -1,4 +1,4 @@
-﻿import "react-native-gesture-handler";
+import "react-native-gesture-handler";
 
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
@@ -26,12 +26,13 @@ const ThemedApp = () => {
   const { status } = useAuth();
   const shouldRenderAuthGate =
     process.env.NODE_ENV !== "test" || process.env.EXPO_PUBLIC_TEST_AUTH_GATE === "enabled";
+  const shouldRenderNavigator = !shouldRenderAuthGate || status === "signedIn";
 
   return (
     <View style={styles.themedRoot}>
       <StatusBar style={isDark ? "light" : "dark"} />
-      <AppNavigator />
-      {shouldRenderAuthGate && status !== "signedIn" ? <AuthOverlay /> : null}
+      {shouldRenderNavigator ? <AppNavigator /> : <View style={styles.authBackground} />}
+      {shouldRenderAuthGate && status === "signedOut" ? <AuthOverlay /> : null}
       <Animated.View
         pointerEvents="none"
         style={[
@@ -78,6 +79,10 @@ const styles = StyleSheet.create({
   },
   themedRoot: {
     flex: 1,
+  },
+  authBackground: {
+    flex: 1,
+    backgroundColor: lightTheme.colors.background,
   },
   splashFallback: {
     flex: 1,

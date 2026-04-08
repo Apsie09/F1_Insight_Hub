@@ -1,4 +1,4 @@
-﻿import type {
+import type {
   CalculatorInput,
   CalculatorResult,
   Race,
@@ -8,7 +8,13 @@
   Season,
   Top10PredictionEntry,
 } from "./domain";
-import type { AuthResponse, LoginInput, RegisterInput } from "./auth";
+import type {
+  AuthNotification,
+  AuthResponse,
+  LoginInput,
+  RegisterInput,
+  ResetPasswordInput,
+} from "./auth";
 
 export type ServiceScenario = "success" | "empty" | "error";
 
@@ -48,4 +54,9 @@ export type PredictionService = {
 export type AuthService = {
   login(input: LoginInput): Promise<AuthResponse>;
   register(input: RegisterInput): Promise<AuthResponse>;
+  me(token: string): Promise<AuthResponse["user"]>;
+  logout(token: string): Promise<void>;
+  getNotifications(token: string): Promise<AuthNotification[]>;
+  markAllNotificationsRead(token: string): Promise<void>;
+  resetPassword(token: string, input: ResetPasswordInput): Promise<void>;
 };

@@ -27,6 +27,7 @@ Working state today:
 - PostgreSQL serving layer implemented
 - ingestion and prediction publishing scripts implemented
 - backend running in DB-first mode
+- auth protection implemented for app data routes
 
 ## Mobile Status
 
@@ -47,6 +48,9 @@ Current mobile behavior:
 - racer selection is searchable
 - unsupported historical seasons show support warnings
 - recent form is backend-derived and displayed as read-only context
+- full-screen login/register overlay gates the app while signed out
+- header account menu shows account name, notifications, password reset, switch account, and logout
+- registration and password reset both require confirm-password input
 
 Known practical limitation:
 
@@ -74,6 +78,9 @@ Current backend capabilities:
 - serves calculator requests from stored race-driver prediction rows
 - exposes support metadata for model-supported vs historical-estimate seasons
 - runs in DB-first mode while preserving a legacy fallback path behind config flags
+- protects app-serving routes with authenticated sessions
+- supports register/login/logout/me
+- supports account notifications and authenticated password reset
 
 Serving mode flags:
 
@@ -100,6 +107,9 @@ Implemented schema:
 - `race_participants`
 - `race_predictions`
 - `racer_race_context`
+- `app_users`
+- `app_user_sessions`
+- `app_notifications`
 
 Implemented scripts:
 
@@ -200,6 +210,17 @@ This means:
 - project status doc maintained
 - database design doc added
 
+### 5. Authentication
+
+- DB-backed accounts implemented
+- Argon2 password hashing implemented
+- server-side session tokens implemented
+- auth protection added for mobile-serving API routes
+- header account menu wired to auth state
+- in-app notifications implemented for account events
+- authenticated password reset implemented
+- email verification was explored and intentionally removed from the codebase
+
 ## How To Run
 
 ### Backend
@@ -238,7 +259,7 @@ EXPO_PUBLIC_API_BASE_URL=http://127.0.0.1:8000 npx expo start --web --clear
 - Expo Go compatibility on iPhone may lag behind the SDK version used by the project
 - DNF model is not integrated
 - calculator adjustments are still heuristic scenario overrides, not a second trained model layer
-- Alembic is configured, but only the initial schema revision exists so far
+- password recovery for signed-out users is not implemented
 - backend still contains a legacy fallback path that should eventually be reduced further
 
 ## Recommended Next Steps

@@ -31,6 +31,12 @@ class ConfidenceLevel(str, Enum):
     HIGH = "High"
 
 
+class AppNotificationType(str, Enum):
+    PASSWORD = "password"
+    SUCCESS = "success"
+    INFO = "info"
+
+
 class UserRole(str, Enum):
     VIEWER = "viewer"
     ADMIN = "admin"
@@ -52,6 +58,40 @@ class AppUser(Base):
         default=utc_now,
         onupdate=utc_now,
     )
+
+    sessions: Mapped[list["AppUserSession"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    notifications: Mapped[list["AppNotification"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+
+
+class AppUserSession(Base):
+    __tablename__ = "app_user_sessions"
+    __table_args__ = (
+        UniqueConstraint("token_hash", name="uq_app_user_sessions_token_hash"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("app_users.id"), nullable=False, index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+    last_used_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user: Mapped["AppUser"] = relationship(back_populates="sessions")
+
+
+class AppNotification(Base):
+    __tablename__ = "app_notifications"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("app_users.id"), nullable=False, index=True)
+    type: Mapped[str] = mapped_column(String(32), nullable=False, default=AppNotificationType.INFO.value)
+    title: Mapped[str] = mapped_column(String(120), nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user: Mapped["AppUser"] = relationship(back_populates="notifications")
 
 class Season(Base):
     __tablename__ = "seasons"
@@ -208,4 +248,3 @@ class RacePrediction(Base):
     driver: Mapped["Driver"] = relationship(back_populates="predictions")
     constructor: Mapped["Constructor | None"] = relationship(back_populates="predictions")
     model_version: Mapped["ModelVersion"] = relationship(back_populates="predictions")
-

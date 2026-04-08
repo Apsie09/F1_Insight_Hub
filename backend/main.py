@@ -4,12 +4,22 @@ from contextlib import asynccontextmanager
 from secrets import token_urlsafe
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from auth import authenticate_user, create_user
+from auth import (
+    authenticate_user,
+    change_user_password,
+    create_user,
+    create_user_session,
+    get_active_session,
+    list_user_notifications,
+    mark_all_notifications_read,
+    revoke_session,
+    touch_session,
+)
 from config import DATA_ROOT, F1_SERVING_MODE, FEATURED_RACE_LIMIT, LEGACY_FALLBACK_ENABLED
 from database import get_db_session
 from db_queries import (
@@ -30,8 +40,19 @@ from db_queries import (
 )
 from helpers import confidence_label, support_message
 from legacy_state import BackendState
-from models import AppUser, Driver, Race, RaceContext, RacerRaceContextRecord
-from schemas import AuthResponsePayload, CalculatorInputPayload, LoginPayload, RegisterPayload
+from models import AppNotification, AppUser, Driver, Race, RaceContext, RacerRaceContextRecord
+from schemas import (
+    AuthNotificationPayload,
+    AuthResponsePayload,
+    AuthUserPayload,
+    CalculatorInputPayload,
+    ChangePasswordPayload,
+    LoginPayload,
+    LogoutResponsePayload,
+    NotificationsResponsePayload,
+    RegisterPayload,
+    SuccessResponsePayload,
+)
 
 
 state = BackendState()
@@ -81,11 +102,36 @@ def serialize_auth_user(user: AppUser) -> dict[str, Any]:
     }
 
 
-def auth_success_response(user: AppUser) -> dict[str, Any]:
+def serialize_auth_notification(notification: AppNotification) -> dict[str, Any]:
     return {
-        "token": token_urlsafe(32),
-        "user": serialize_auth_user(user),
+        "id": notification.id,
+        "type": notification.type,
+        "title": notification.title,
+        "message": notification.message,
+        "createdAt": notification.created_at.isoformat(),
+        "readAt": notification.read_at.isoformat() if notification.read_at is not None else None,
     }
+
+
+def extract_bearer_token(authorization: str | None) -> str:
+    if not authorization:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing authorization header.")
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token.strip():
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authorization header.")
+    return token.strip()
+
+
+def get_current_user(
+    authorization: str | None = Header(default=None),
+    db: Session = Depends(get_db_session),
+) -> AppUser:
+    token = extract_bearer_token(authorization)
+    session = get_active_session(db, token)
+    if session is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expired or invalid.")
+    touch_session(db, session)
+    return session.user
 
 
 @app.post("/auth/register", response_model=AuthResponsePayload, status_code=status.HTTP_201_CREATED)
@@ -100,7 +146,12 @@ def register_user(payload: RegisterPayload, db: Session = Depends(get_db_session
     except ValueError as error:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
 
-    return auth_success_response(user)
+    token = token_urlsafe(32)
+    create_user_session(db, user, token)
+    return {
+        "token": token,
+        "user": serialize_auth_user(user),
+    }
 
 
 @app.post("/auth/login", response_model=AuthResponsePayload)
@@ -109,9 +160,62 @@ def login_user(payload: LoginPayload, db: Session = Depends(get_db_session)) -> 
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password.")
 
-    return auth_success_response(user)
+    token = token_urlsafe(32)
+    create_user_session(db, user, token)
+    return {
+        "token": token,
+        "user": serialize_auth_user(user),
+    }
+
+
+@app.get("/auth/me", response_model=AuthUserPayload)
+def get_authenticated_user(current_user: AppUser = Depends(get_current_user)) -> dict[str, Any]:
+    return serialize_auth_user(current_user)
+
+
+@app.post("/auth/logout", response_model=LogoutResponsePayload)
+def logout_user(
+    authorization: str | None = Header(default=None),
+    db: Session = Depends(get_db_session),
+) -> dict[str, bool]:
+    token = extract_bearer_token(authorization)
+    session = get_active_session(db, token)
+    if session is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expired or invalid.")
+    revoke_session(db, session)
+    return {"success": True}
+
+
+@app.get("/auth/notifications", response_model=NotificationsResponsePayload)
+def get_auth_notifications(current_user: AppUser = Depends(get_current_user), db: Session = Depends(get_db_session)) -> dict[str, Any]:
+    notifications = list_user_notifications(db, current_user)
+    return {"notifications": [serialize_auth_notification(notification) for notification in notifications]}
+
+
+@app.post("/auth/notifications/read-all", response_model=SuccessResponsePayload)
+def read_all_auth_notifications(
+    current_user: AppUser = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> dict[str, bool]:
+    mark_all_notifications_read(db, current_user)
+    return {"success": True}
+
+
+@app.post("/auth/password/reset", response_model=SuccessResponsePayload)
+def reset_authenticated_user_password(
+    payload: ChangePasswordPayload,
+    current_user: AppUser = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> dict[str, bool]:
+    try:
+        change_user_password(db, current_user, payload.currentPassword, payload.newPassword)
+    except ValueError as error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+    return {"success": True}
+
+
 @app.get("/seasons")
-def get_seasons(db: Session = Depends(get_db_session)) -> list[dict[str, Any]]:
+def get_seasons(_current_user: AppUser = Depends(get_current_user), db: Session = Depends(get_db_session)) -> list[dict[str, Any]]:
     state.require_ready()
     seasons = db.execute(select_from_seasons()).scalars().all()
     if seasons:
@@ -130,7 +234,11 @@ def get_seasons(db: Session = Depends(get_db_session)) -> list[dict[str, Any]]:
 
 
 @app.get("/seasons/{year}/races")
-def get_races_by_season(year: int, db: Session = Depends(get_db_session)) -> list[dict[str, Any]]:
+def get_races_by_season(
+    year: int,
+    _current_user: AppUser = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> list[dict[str, Any]]:
     state.require_ready()
     races = db.execute(select_from_races(year)).scalars().all()
     if races:
@@ -139,7 +247,7 @@ def get_races_by_season(year: int, db: Session = Depends(get_db_session)) -> lis
 
 
 @app.get("/races")
-def get_all_races(db: Session = Depends(get_db_session)) -> list[dict[str, Any]]:
+def get_all_races(_current_user: AppUser = Depends(get_current_user), db: Session = Depends(get_db_session)) -> list[dict[str, Any]]:
     state.require_ready()
     races = db.execute(select_from_races()).scalars().all()
     if races:
@@ -151,7 +259,7 @@ def get_all_races(db: Session = Depends(get_db_session)) -> list[dict[str, Any]]
 
 
 @app.get("/races/featured")
-def get_featured_races(db: Session = Depends(get_db_session)) -> list[dict[str, Any]]:
+def get_featured_races(_current_user: AppUser = Depends(get_current_user), db: Session = Depends(get_db_session)) -> list[dict[str, Any]]:
     state.require_ready()
     races = db.execute(select_featured_races(FEATURED_RACE_LIMIT)).scalars().all()
     if races:
@@ -160,7 +268,11 @@ def get_featured_races(db: Session = Depends(get_db_session)) -> list[dict[str, 
 
 
 @app.get("/races/{race_id}")
-def get_race_details(race_id: str, db: Session = Depends(get_db_session)) -> dict[str, Any]:
+def get_race_details(
+    race_id: str,
+    _current_user: AppUser = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> dict[str, Any]:
     state.require_ready()
     race = db.get(Race, race_id)
     if race is not None:
@@ -177,7 +289,11 @@ def get_race_details(race_id: str, db: Session = Depends(get_db_session)) -> dic
 
 
 @app.get("/races/{race_id}/predictions/top10")
-def get_top10_prediction(race_id: str, db: Session = Depends(get_db_session)) -> list[dict[str, Any]]:
+def get_top10_prediction(
+    race_id: str,
+    _current_user: AppUser = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> list[dict[str, Any]]:
     state.require_ready()
     state.require_model()
     model_version_id = latest_model_version_id(db)
@@ -193,7 +309,11 @@ def get_top10_prediction(race_id: str, db: Session = Depends(get_db_session)) ->
 
 
 @app.get("/races/{race_id}/participants")
-def get_race_participants(race_id: str, db: Session = Depends(get_db_session)) -> list[dict[str, Any]]:
+def get_race_participants(
+    race_id: str,
+    _current_user: AppUser = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> list[dict[str, Any]]:
     state.require_ready()
     model_version_id = latest_model_version_id(db)
     if model_version_id is not None:
@@ -217,7 +337,12 @@ def get_race_participants(race_id: str, db: Session = Depends(get_db_session)) -
 
 
 @app.get("/races/{race_id}/racers/{racer_id}")
-def get_racer_details(race_id: str, racer_id: str, db: Session = Depends(get_db_session)) -> dict[str, Any]:
+def get_racer_details(
+    race_id: str,
+    racer_id: str,
+    _current_user: AppUser = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> dict[str, Any]:
     state.require_ready()
     driver = db.get(Driver, racer_id)
     race = db.get(Race, race_id)
@@ -256,7 +381,7 @@ def get_racer_details(race_id: str, racer_id: str, db: Session = Depends(get_db_
 
 
 @app.get("/racers")
-def get_racers(db: Session = Depends(get_db_session)) -> list[dict[str, Any]]:
+def get_racers(_current_user: AppUser = Depends(get_current_user), db: Session = Depends(get_db_session)) -> list[dict[str, Any]]:
     state.require_ready()
     drivers = db.execute(select(Driver).order_by(Driver.name.asc())).scalars().all()
     if drivers:
@@ -265,7 +390,11 @@ def get_racers(db: Session = Depends(get_db_session)) -> list[dict[str, Any]]:
 
 
 @app.post("/predictions/calculate")
-def calculate_prediction(payload: CalculatorInputPayload, db: Session = Depends(get_db_session)) -> dict[str, Any]:
+def calculate_prediction(
+    payload: CalculatorInputPayload,
+    _current_user: AppUser = Depends(get_current_user),
+    db: Session = Depends(get_db_session),
+) -> dict[str, Any]:
     state.require_ready()
     state.require_model()
 
@@ -310,9 +439,5 @@ def calculate_prediction(payload: CalculatorInputPayload, db: Session = Depends(
             f"Weather scenario '{payload.weatherCondition}' applied a lightweight simulation penalty/boost for interactive use.",
         ],
     }
-
-
-
-
 
 

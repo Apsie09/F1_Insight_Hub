@@ -1,6 +1,6 @@
-﻿import { apiBaseUrl } from "./apiService";
+import { apiBaseUrl } from "./apiService";
+import type { AuthNotification, AuthUser, LoginInput, RegisterInput, ResetPasswordInput } from "../types/auth";
 import type { AuthService } from "../types/services";
-import type { LoginInput, RegisterInput } from "../types/auth";
 
 const buildUrl = (path: string): string => `${apiBaseUrl}${path}`;
 
@@ -27,7 +27,12 @@ const extractErrorMessage = async (response: Response): Promise<string> => {
   return `${response.status} ${response.statusText || "Request failed"}`.trim();
 };
 
-const postJson = async <T>(path: string, payload: LoginInput | RegisterInput): Promise<T> => {
+const authHeaders = (token: string, includeJson = false): HeadersInit => ({
+  ...(includeJson ? { "Content-Type": "application/json" } : {}),
+  Authorization: `Bearer ${token}`,
+});
+
+const postJson = async <T>(path: string, payload: LoginInput | RegisterInput | ResetPasswordInput): Promise<T> => {
   const response = await fetch(buildUrl(path), {
     method: "POST",
     headers: {
@@ -46,4 +51,51 @@ const postJson = async <T>(path: string, payload: LoginInput | RegisterInput): P
 export const apiAuthService: AuthService = {
   login: (input) => postJson("/auth/login", input),
   register: (input) => postJson("/auth/register", input),
+  me: async (token) => {
+    const response = await fetch(buildUrl("/auth/me"), {
+      headers: authHeaders(token),
+    });
+    if (!response.ok) {
+      throw new Error(await extractErrorMessage(response));
+    }
+    return (await response.json()) as AuthUser;
+  },
+  logout: async (token) => {
+    const response = await fetch(buildUrl("/auth/logout"), {
+      method: "POST",
+      headers: authHeaders(token),
+    });
+    if (!response.ok) {
+      throw new Error(await extractErrorMessage(response));
+    }
+  },
+  getNotifications: async (token) => {
+    const response = await fetch(buildUrl("/auth/notifications"), {
+      headers: authHeaders(token),
+    });
+    if (!response.ok) {
+      throw new Error(await extractErrorMessage(response));
+    }
+    const payload = (await response.json()) as { notifications: AuthNotification[] };
+    return payload.notifications;
+  },
+  markAllNotificationsRead: async (token) => {
+    const response = await fetch(buildUrl("/auth/notifications/read-all"), {
+      method: "POST",
+      headers: authHeaders(token),
+    });
+    if (!response.ok) {
+      throw new Error(await extractErrorMessage(response));
+    }
+  },
+  resetPassword: async (token, input) => {
+    const response = await fetch(buildUrl("/auth/password/reset"), {
+      method: "POST",
+      headers: authHeaders(token, true),
+      body: JSON.stringify(input),
+    });
+    if (!response.ok) {
+      throw new Error(await extractErrorMessage(response));
+    }
+  },
 };

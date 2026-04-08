@@ -68,6 +68,9 @@ It stores:
 - model versions
 - race predictions
 - racer race context
+- app users
+- app user sessions
+- app notifications
 
 ## Core Serving Schema
 
@@ -253,6 +256,59 @@ Constraint intent:
 
 - unique `(race_id, driver_id)`
 
+### `app_users`
+
+Purpose:
+
+- store application login identities
+
+Columns:
+
+- `id`
+- `email`
+- `display_name`
+- `password_hash`
+- `role`
+- `is_active`
+- `created_at`
+- `updated_at`
+
+### `app_user_sessions`
+
+Purpose:
+
+- persist authenticated sessions for protected API access
+
+Columns:
+
+- `id`
+- `user_id`
+- `token_hash`
+- `created_at`
+- `last_used_at`
+- `expires_at`
+- `revoked_at`
+
+Constraint intent:
+
+- unique `token_hash`
+
+### `app_notifications`
+
+Purpose:
+
+- store in-app account notifications
+
+Columns:
+
+- `id`
+- `user_id`
+- `type`
+- `title`
+- `message`
+- `created_at`
+- `read_at`
+
 ## Implemented Scripts
 
 ### `backend/init_db.py`
@@ -279,6 +335,54 @@ Responsibility:
 - publish racer race context
 
 ## API Mapping
+
+The mobile-serving domain endpoints are protected by session auth.
+
+### `POST /auth/register`
+
+Writes to:
+
+- `app_users`
+- `app_user_sessions`
+
+### `POST /auth/login`
+
+Reads/Writes:
+
+- `app_users`
+- `app_user_sessions`
+
+### `GET /auth/me`
+
+Reads from:
+
+- `app_users`
+- `app_user_sessions`
+
+### `POST /auth/logout`
+
+Updates:
+
+- `app_user_sessions`
+
+### `GET /auth/notifications`
+
+Reads from:
+
+- `app_notifications`
+
+### `POST /auth/notifications/read-all`
+
+Updates:
+
+- `app_notifications`
+
+### `POST /auth/password/reset`
+
+Reads/Writes:
+
+- `app_users`
+- `app_notifications`
 
 ### `GET /seasons`
 
@@ -362,4 +466,4 @@ SQLite remains acceptable only for:
 - secrets/env handling is still manual
 - scheduled ingestion/publish automation is not set up
 - legacy fallback serving path still exists and should be minimized over time
-- only the initial Alembic revision exists so far
+- signed-out password recovery is not implemented

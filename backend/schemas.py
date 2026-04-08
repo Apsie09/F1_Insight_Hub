@@ -62,3 +62,29 @@ class AuthUserPayload(BaseModel):
 class AuthResponsePayload(BaseModel):
     token: str
     user: AuthUserPayload
+
+
+class LogoutResponsePayload(BaseModel):
+    success: bool
+
+
+class AuthNotificationPayload(BaseModel):
+    id: int
+    type: str
+    title: str
+    message: str
+    createdAt: str
+    readAt: str | None
+
+
+class NotificationsResponsePayload(BaseModel):
+    notifications: list[AuthNotificationPayload]
+
+
+class ChangePasswordPayload(BaseModel):
+    currentPassword: str = Field(min_length=1, max_length=128)
+    newPassword: str = Field(min_length=8, max_length=128)
+
+
+class SuccessResponsePayload(BaseModel):
+    success: bool

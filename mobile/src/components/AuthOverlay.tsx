@@ -31,6 +31,7 @@ export const AuthOverlay = () => {
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
   const [modeTrackWidth, setModeTrackWidth] = useState(0);
 
@@ -64,7 +65,7 @@ export const AuthOverlay = () => {
     }).start();
   }, [mode, modeProgress, registerFieldProgress]);
 
-  if (status === "signedIn") {
+  if (status !== "signedOut") {
     return null;
   }
 
@@ -85,6 +86,11 @@ export const AuthOverlay = () => {
 
     if (password.length < 8) {
       setValidationMessage("Password must be at least 8 characters.");
+      return;
+    }
+
+    if (mode === "register" && confirmPassword !== password) {
+      setValidationMessage("Passwords do not match.");
       return;
     }
 
@@ -253,6 +259,24 @@ export const AuthOverlay = () => {
                 testID="auth-input-password"
               />
             </View>
+
+            {mode === "register" ? (
+              <View style={styles.fieldBlock}>
+                <Text style={styles.label}>Confirm Password</Text>
+                <TextInput
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  style={styles.input}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType="newPassword"
+                  placeholder="Repeat your password"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  testID="auth-input-confirm-password"
+                />
+              </View>
+            ) : null}
 
             {validationMessage ? <Text style={styles.validation}>{validationMessage}</Text> : null}
             {error ? <Text style={styles.validation}>{error}</Text> : null}

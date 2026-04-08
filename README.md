@@ -13,7 +13,7 @@ Main runtime flow:
 1. Mobile app calls backend REST API.
 2. Backend reads serving data from SQLite/PostgreSQL.
 3. Prediction calculator uses stored model outputs + lightweight scenario adjustments.
-4. Login/register uses DB-backed `app_users` table.
+4. Auth uses DB-backed users, sessions, and notifications tables.
 
 ## Repository Layout
 
@@ -41,9 +41,11 @@ The project already uses a shared backend DB serving layer consumed by TypeScrip
 - `model_versions`
 - `race_predictions`
 - `racer_race_context`
-- `app_users` (added for login/register)
+- `app_users`
+- `app_user_sessions`
+- `app_notifications`
 
-### Auth table
+### Auth tables
 
 `app_users` stores:
 
@@ -55,6 +57,26 @@ The project already uses a shared backend DB serving layer consumed by TypeScrip
 - `is_active`
 - `created_at`
 - `updated_at`
+
+`app_user_sessions` stores:
+
+- `id`
+- `user_id`
+- `token_hash`
+- `created_at`
+- `last_used_at`
+- `expires_at`
+- `revoked_at`
+
+`app_notifications` stores:
+
+- `id`
+- `user_id`
+- `type`
+- `title`
+- `message`
+- `created_at`
+- `read_at`
 
 ## API Endpoints
 
@@ -76,6 +98,11 @@ The project already uses a shared backend DB serving layer consumed by TypeScrip
 
 - `POST /auth/register`
 - `POST /auth/login`
+- `GET /auth/me`
+- `POST /auth/logout`
+- `GET /auth/notifications`
+- `POST /auth/notifications/read-all`
+- `POST /auth/password/reset`
 
 ## Mobile Login UX (Implemented)
 
@@ -83,7 +110,13 @@ The project already uses a shared backend DB serving layer consumed by TypeScrip
 - Modes: `Log In` and `Create Account`.
 - On success, overlay disappears and app unlocks.
 - Session is persisted with `expo-secure-store` (fallback handling included).
-- Backend mode: accounts are stored in DB with Argon2 password hashing.
+- Backend mode: accounts, sessions, and notifications are stored in DB.
+- Header account menu shows:
+  - account name
+  - notifications
+  - password reset
+  - switch account
+  - log out
 - Test mode: auth gate is bypassed unless `EXPO_PUBLIC_TEST_AUTH_GATE=enabled`.
 
 ## Dependencies
@@ -214,6 +247,7 @@ EXPO_PUBLIC_API_BASE_URL=http://<your-laptop-lan-ip>:8000 npx expo start --clear
 3. Submit display name, email, password.
 4. Overlay closes on success.
 5. Session is persisted locally, so the overlay stays hidden until you use the header `Log out` button (top-right).
+6. Password changes happen from the header account menu and require current password + confirm new password.
 
 ## Testing
 
@@ -258,6 +292,18 @@ EXPO_PUBLIC_DISABLE_MOCK_FALLBACK=true
 The login overlay only shows while signed out.
 
 - If you already authenticated once, use the top-right header `Log out` button to reopen it.
+
+### Password reset fails
+
+The current password reset flow is authenticated only.
+
+- open the account menu
+- enter current password
+- enter new password
+- confirm the new password
+- submit
+
+If the current password is wrong, the backend returns a `400` error with a clear message.
 - On web, you can also clear local storage key `f1_insight_hub_auth_session`.
 
 ### Backend returns empty lists
@@ -292,4 +338,3 @@ If mismatches are reported, run `npx expo install <package>` for the listed pack
 - Passwords are expected to be securely hashed server-side (currently Argon2).
 - `token` is currently a lightweight session token placeholder for frontend gating and can be replaced with JWT + refresh strategy later.
 - Existing race/prediction endpoints remain unchanged.
-

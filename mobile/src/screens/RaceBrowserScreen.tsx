@@ -98,53 +98,53 @@ export const RaceBrowserScreen = ({ navigation }: RaceBrowserScreenProps) => {
     }
 
     return (
-      <View style={[styles.content, contentInsets]}>
-        <SectionHeader title="Browse by year" subtitle="Tap a season to filter available race cards." />
-        <View style={styles.yearSelectorBlock}>
-          <YearChipSelector
-            years={seasonsResource.data.map((season) => season.year)}
-            selectedYear={selectedYear}
-            onSelect={setSelectedYear}
-          />
-        </View>
-
-        <SectionHeader title={title} subtitle="Open a race to inspect Top-10 predictions and racer details." />
-        {racesResource.status === "loading" || racesResource.status === "idle" ? (
-          <LoadingState label="Loading race list..." />
-        ) : null}
-        {racesResource.status === "error" ? (
-          <ErrorState message={racesResource.error ?? "Race list unavailable."} onRetry={racesResource.refresh} />
-        ) : null}
-        {racesResource.status === "empty" ? (
-          <EmptyState
-            title="No races available"
-          message="This season has no race fixtures in the current backend response."
-            actionLabel="Reload"
-            onAction={racesResource.refresh}
-          />
-        ) : null}
-        {racesResource.status === "success" && racesResource.data ? (
-          <FlatList
-            style={styles.raceList}
-            data={racesResource.data}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={[styles.listContent, listInsets]}
-            renderItem={({ item }) => (
-              <RaceCard
-                race={item}
-                onPress={(race) =>
-                  navigation.navigate("RaceDetails", {
-                    raceId: race.id,
-                    season: race.season,
-                  })
-                }
+      <FlatList
+        style={styles.raceList}
+        data={racesResource.status === "success" && racesResource.data ? racesResource.data : []}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={[styles.listContent, contentInsets, listInsets]}
+        ListHeaderComponent={
+          <>
+            <SectionHeader title="Browse by year" subtitle="Tap a season to filter available race cards." />
+            <View style={styles.yearSelectorBlock}>
+              <YearChipSelector
+                years={seasonsResource.data.map((season) => season.year)}
+                selectedYear={selectedYear}
+                onSelect={setSelectedYear}
               />
-            )}
-            ItemSeparatorComponent={() => <View style={{ height: theme.spacing.sm }} />}
-            showsVerticalScrollIndicator={false}
+            </View>
+
+            <SectionHeader title={title} subtitle="Open a race to inspect Top-10 predictions and racer details." />
+            {racesResource.status === "loading" || racesResource.status === "idle" ? (
+              <LoadingState label="Loading race list..." />
+            ) : null}
+            {racesResource.status === "error" ? (
+              <ErrorState message={racesResource.error ?? "Race list unavailable."} onRetry={racesResource.refresh} />
+            ) : null}
+            {racesResource.status === "empty" ? (
+              <EmptyState
+                title="No races available"
+                message="This season has no race fixtures in the current backend response."
+                actionLabel="Reload"
+                onAction={racesResource.refresh}
+              />
+            ) : null}
+          </>
+        }
+        renderItem={({ item }) => (
+          <RaceCard
+            race={item}
+            onPress={(race) =>
+              navigation.navigate("RaceDetails", {
+                raceId: race.id,
+                season: race.season,
+              })
+            }
           />
-        ) : null}
-      </View>
+        )}
+        ItemSeparatorComponent={() => <View style={{ height: theme.spacing.sm }} />}
+        showsVerticalScrollIndicator={false}
+      />
     );
   };
 
@@ -158,7 +158,6 @@ const createStyles = (theme: AppTheme) =>
       backgroundColor: theme.colors.background,
     },
     content: {
-      flex: 1,
       paddingTop: theme.spacing.md,
       gap: theme.spacing.md,
     },
@@ -170,7 +169,6 @@ const createStyles = (theme: AppTheme) =>
       flex: 1,
     },
     listContent: {
-      paddingBottom: theme.spacing.lg,
+      paddingTop: theme.spacing.md,
     },
   });
-

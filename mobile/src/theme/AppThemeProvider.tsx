@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { AccessibilityInfo, Animated, Easing, useColorScheme } from "react-native";
+import { AccessibilityInfo, Animated, useColorScheme } from "react-native";
 
 import { darkTheme, lightTheme } from "../constants/theme";
 import type { AppTheme, ThemeMode } from "../constants/theme";
@@ -27,7 +27,7 @@ const getSystemMode = (scheme: ReturnType<typeof useColorScheme>): ThemeMode =>
 export const AppThemeProvider = ({ children }: AppThemeProviderProps) => {
   const systemMode = getSystemMode(useColorScheme());
   const [mode, setMode] = useState<ThemeMode>(systemMode);
-  const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
+  const [, setReduceMotionEnabled] = useState(false);
   const [transitionOverlayColor, setTransitionOverlayColor] = useState(lightTheme.colors.background);
   const transitionOpacity = useRef(new Animated.Value(0)).current;
 
@@ -56,25 +56,10 @@ export const AppThemeProvider = ({ children }: AppThemeProviderProps) => {
     if (nextMode === mode) {
       return;
     }
-
-    const fromTheme = mode === "dark" ? darkTheme : lightTheme;
-    setTransitionOverlayColor(fromTheme.colors.background);
+    setTransitionOverlayColor((mode === "dark" ? darkTheme : lightTheme).colors.background);
     transitionOpacity.stopAnimation();
-
-    if (reduceMotionEnabled) {
-      transitionOpacity.setValue(0);
-      setMode(nextMode);
-      return;
-    }
-
-    transitionOpacity.setValue(1);
     setMode(nextMode);
-    Animated.timing(transitionOpacity, {
-      toValue: 0,
-      duration: 220,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    }).start();
+    transitionOpacity.setValue(0);
   };
 
   const value = useMemo<AppThemeContextValue>(
@@ -87,7 +72,7 @@ export const AppThemeProvider = ({ children }: AppThemeProviderProps) => {
       transitionOverlayColor,
       transitionOpacity,
     }),
-    [mode, reduceMotionEnabled, theme, transitionOpacity, transitionOverlayColor]
+    [mode, theme, transitionOpacity, transitionOverlayColor]
   );
 
   return <AppThemeContext.Provider value={value}>{children}</AppThemeContext.Provider>;

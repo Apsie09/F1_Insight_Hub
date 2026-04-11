@@ -1,6 +1,16 @@
 import { useCallback, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "../auth/AuthProvider";
 import type { AppTheme } from "../constants/theme";
@@ -27,7 +37,10 @@ const formatTimestamp = (value: string): string => {
 
 export const HeaderActions = () => {
   const { theme } = useAppTheme();
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const compactMode = width <= 430;
   const {
     status,
     user,
@@ -101,7 +114,7 @@ export const HeaderActions = () => {
   if (status !== "signedIn" || !user) {
     return (
       <View style={styles.container}>
-        <DataSourceBadge />
+        {!compactMode ? <DataSourceBadge /> : null}
         <ThemeSwitch />
       </View>
     );
@@ -109,12 +122,17 @@ export const HeaderActions = () => {
 
   return (
     <View style={styles.container}>
-      <DataSourceBadge />
+      {!compactMode ? <DataSourceBadge /> : null}
       <ThemeSwitch />
       <View style={styles.accountWrap}>
         <Pressable
           onPress={toggleMenu}
-          style={({ pressed }) => [styles.accountButton, pressed && styles.accountButtonPressed]}
+          hitSlop={6}
+          style={({ pressed }) => [
+            styles.accountButton,
+            compactMode && styles.accountButtonCompact,
+            pressed && styles.accountButtonPressed,
+          ]}
           accessibilityRole="button"
           accessibilityLabel="Open account menu"
           testID="header-account-button"
@@ -122,9 +140,11 @@ export const HeaderActions = () => {
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{getInitials(user.displayName)}</Text>
           </View>
-          <Text numberOfLines={1} style={styles.accountLabel}>
-            {user.displayName}
-          </Text>
+          {!compactMode ? (
+            <Text numberOfLines={1} style={styles.accountLabel}>
+              {user.displayName}
+            </Text>
+          ) : null}
           {unreadNotificationCount > 0 ? (
             <View style={styles.notificationBadge}>
               <Text style={styles.notificationBadgeText}>{Math.min(unreadNotificationCount, 9)}</Text>
@@ -136,9 +156,23 @@ export const HeaderActions = () => {
             color={theme.colors.textPrimary}
           />
         </Pressable>
-
-        {menuOpen ? (
-          <View style={styles.menuPanel} testID="header-account-menu">
+      </View>
+      <Modal
+        visible={menuOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={closeMenu}
+        testID="header-account-menu"
+      >
+        <View style={styles.menuBackdrop}>
+          <Pressable style={styles.menuBackdropPressable} onPress={closeMenu} />
+          <View
+            style={[
+              styles.menuPanel,
+              compactMode && styles.menuPanelCompact,
+              { top: insets.top + 54 },
+            ]}
+          >
             <ScrollView style={styles.menuScroll} contentContainerStyle={styles.menuScrollContent}>
               <Text style={styles.menuTitle}>{user.displayName}</Text>
               <Text style={styles.menuSubtitle}>{user.email}</Text>
@@ -257,8 +291,8 @@ export const HeaderActions = () => {
               </Pressable>
             </ScrollView>
           </View>
-        ) : null}
-      </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -274,6 +308,13 @@ const createStyles = (theme: AppTheme) =>
     accountWrap: {
       position: "relative",
     },
+    menuBackdrop: {
+      flex: 1,
+      backgroundColor: "rgba(5, 10, 18, 0.22)",
+    },
+    menuBackdropPressable: {
+      ...StyleSheet.absoluteFillObject,
+    },
     accountButton: {
       maxWidth: 190,
       minHeight: 34,
@@ -285,6 +326,12 @@ const createStyles = (theme: AppTheme) =>
       flexDirection: "row",
       alignItems: "center",
       gap: theme.spacing.xs,
+    },
+    accountButtonCompact: {
+      maxWidth: 56,
+      minWidth: 56,
+      justifyContent: "center",
+      paddingHorizontal: 6,
     },
     accountButtonPressed: {
       opacity: 0.8,
@@ -324,8 +371,7 @@ const createStyles = (theme: AppTheme) =>
     },
     menuPanel: {
       position: "absolute",
-      top: 40,
-      right: 0,
+      right: theme.spacing.sm,
       width: 320,
       maxHeight: 520,
       borderRadius: theme.radius.lg,
@@ -334,6 +380,11 @@ const createStyles = (theme: AppTheme) =>
       backgroundColor: theme.colors.surface,
       ...theme.shadows.card,
       zIndex: 80,
+    },
+    menuPanelCompact: {
+      right: -4,
+      width: 296,
+      maxWidth: 296,
     },
     menuScroll: {
       maxHeight: 520,

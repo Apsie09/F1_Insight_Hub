@@ -40,8 +40,16 @@ const HomeStackNavigator = () => {
       headerTitleStyle: {
         fontFamily: theme.fonts.headingSemi,
         color: theme.colors.textPrimary,
+        fontSize: Platform.OS === "ios" ? 24 : 24,
       },
       headerTintColor: theme.colors.textPrimary,
+      headerTitleAlign: "left" as const,
+      headerRightContainerStyle: {
+        paddingRight: 8,
+      },
+      headerTitleContainerStyle: {
+        paddingRight: 12,
+      },
       headerRight: () => <HeaderActions />,
     }),
     [theme]
@@ -71,8 +79,16 @@ const BrowseStackNavigator = () => {
       headerTitleStyle: {
         fontFamily: theme.fonts.headingSemi,
         color: theme.colors.textPrimary,
+        fontSize: Platform.OS === "ios" ? 24 : 24,
       },
       headerTintColor: theme.colors.textPrimary,
+      headerTitleAlign: "left" as const,
+      headerRightContainerStyle: {
+        paddingRight: 8,
+      },
+      headerTitleContainerStyle: {
+        paddingRight: 12,
+      },
       headerRight: () => <HeaderActions />,
     }),
     [theme]
@@ -106,8 +122,16 @@ const PredictionStackNavigator = () => {
       headerTitleStyle: {
         fontFamily: theme.fonts.headingSemi,
         color: theme.colors.textPrimary,
+        fontSize: Platform.OS === "ios" ? 24 : 24,
       },
       headerTintColor: theme.colors.textPrimary,
+      headerTitleAlign: "left" as const,
+      headerRightContainerStyle: {
+        paddingRight: 8,
+      },
+      headerTitleContainerStyle: {
+        paddingRight: 12,
+      },
       headerRight: () => <HeaderActions />,
     }),
     [theme]
@@ -130,7 +154,7 @@ export const AppNavigator = () => {
   const swipeCooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialLayout = useMemo(() => ({ width: Dimensions.get("window").width }), []);
   // RN Web uses PanResponder for tab swipes and is prone to jitter with rapid drags in content-heavy pages.
-  const swipeEnabledByPlatform = Platform.OS !== "web";
+  const swipeEnabledByPlatform = Platform.OS === "android";
 
   useEffect(() => {
     return () => {
@@ -188,7 +212,6 @@ export const AppNavigator = () => {
           animationEnabled: true,
           sceneStyle: {
             backgroundColor: theme.colors.background,
-            overflow: "hidden",
           },
           tabBarShowIcon: true,
           tabBarActiveTintColor: theme.colors.accent,
@@ -249,4 +272,3 @@ export const AppNavigator = () => {
     </NavigationContainer>
   );
 };
-

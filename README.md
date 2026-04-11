@@ -129,16 +129,18 @@ These should stay local to each project folder (`backend/`, `mobile/`, `ml/`).
 
 Key runtime dependencies:
 
-- `expo ~55.0.12`
-- `react 19.2.0`
-- `react-native 0.83.4`
+- `expo ~54.0.33`
+- `react 19.1.0`
+- `react-native 0.81.5`
 - `@react-navigation/*`
-- `expo-secure-store ~55.0.12`
+- `expo-font ~14.0.11`
+- `expo-secure-store ~15.0.8`
+- `expo-status-bar ~3.0.9`
 
 Testing/dev dependencies include:
 
 - `jest`
-- `jest-expo ~55.0.14`
+- `jest-expo ~54.0.17`
 - `@testing-library/react-native`
 - `typescript`
 
@@ -168,7 +170,7 @@ Industry-standard practice is:
 
 Global Expo CLI is optional. Current machine has:
 
-- `expo@55.0.12` globally.
+- `expo@54.x` or `npx expo` from the local project install.
 
 ## Setup and Run
 

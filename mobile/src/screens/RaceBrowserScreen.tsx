@@ -105,7 +105,7 @@ export const RaceBrowserScreen = ({ navigation }: RaceBrowserScreenProps) => {
         contentContainerStyle={[styles.listContent, contentInsets, listInsets]}
         ListHeaderComponent={
           <>
-            <SectionHeader title="Browse by year" subtitle="Tap a season to filter available race cards." />
+            <SectionHeader title="Browse by year" subtitle="Type a year or open the selector to filter race cards." />
             <View style={styles.yearSelectorBlock}>
               <YearChipSelector
                 years={seasonsResource.data.map((season) => season.year)}

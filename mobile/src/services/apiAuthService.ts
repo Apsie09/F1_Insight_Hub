@@ -3,6 +3,26 @@ import type { AuthNotification, AuthUser, LoginInput, RegisterInput, ResetPasswo
 import type { AuthService } from "../types/services";
 
 const buildUrl = (path: string): string => `${apiBaseUrl}${path}`;
+const REQUEST_TIMEOUT_MS = 8000;
+
+const fetchWithTimeout = async (input: RequestInfo, init?: RequestInit): Promise<Response> => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("Backend request timed out. Check that the API URL points to your laptop LAN IP.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+};
 
 const extractErrorMessage = async (response: Response): Promise<string> => {
   try {
@@ -33,7 +53,7 @@ const authHeaders = (token: string, includeJson = false): HeadersInit => ({
 });
 
 const postJson = async <T>(path: string, payload: LoginInput | RegisterInput | ResetPasswordInput): Promise<T> => {
-  const response = await fetch(buildUrl(path), {
+  const response = await fetchWithTimeout(buildUrl(path), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -52,7 +72,7 @@ export const apiAuthService: AuthService = {
   login: (input) => postJson("/auth/login", input),
   register: (input) => postJson("/auth/register", input),
   me: async (token) => {
-    const response = await fetch(buildUrl("/auth/me"), {
+    const response = await fetchWithTimeout(buildUrl("/auth/me"), {
       headers: authHeaders(token),
     });
     if (!response.ok) {
@@ -61,7 +81,7 @@ export const apiAuthService: AuthService = {
     return (await response.json()) as AuthUser;
   },
   logout: async (token) => {
-    const response = await fetch(buildUrl("/auth/logout"), {
+    const response = await fetchWithTimeout(buildUrl("/auth/logout"), {
       method: "POST",
       headers: authHeaders(token),
     });
@@ -70,7 +90,7 @@ export const apiAuthService: AuthService = {
     }
   },
   getNotifications: async (token) => {
-    const response = await fetch(buildUrl("/auth/notifications"), {
+    const response = await fetchWithTimeout(buildUrl("/auth/notifications"), {
       headers: authHeaders(token),
     });
     if (!response.ok) {
@@ -80,7 +100,7 @@ export const apiAuthService: AuthService = {
     return payload.notifications;
   },
   markAllNotificationsRead: async (token) => {
-    const response = await fetch(buildUrl("/auth/notifications/read-all"), {
+    const response = await fetchWithTimeout(buildUrl("/auth/notifications/read-all"), {
       method: "POST",
       headers: authHeaders(token),
     });
@@ -89,7 +109,7 @@ export const apiAuthService: AuthService = {
     }
   },
   resetPassword: async (token, input) => {
-    const response = await fetch(buildUrl("/auth/password/reset"), {
+    const response = await fetchWithTimeout(buildUrl("/auth/password/reset"), {
       method: "POST",
       headers: authHeaders(token, true),
       body: JSON.stringify(input),

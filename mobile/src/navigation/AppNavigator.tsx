@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Dimensions, Platform } from "react-native";
+import { Dimensions, Platform, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import {
   NavigationContainer,
@@ -8,6 +8,7 @@ import {
 } from "@react-navigation/native";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HeaderActions } from "../components/HeaderActions";
 import { APP_TAB_BAR_HEIGHT } from "../constants/layout";
@@ -40,17 +41,14 @@ const HomeStackNavigator = () => {
       headerTitleStyle: {
         fontFamily: theme.fonts.headingSemi,
         color: theme.colors.textPrimary,
-        fontSize: Platform.OS === "ios" ? 24 : 24,
+        fontSize: Platform.OS === "ios" ? 22 : 24,
       },
       headerTintColor: theme.colors.textPrimary,
       headerTitleAlign: "left" as const,
-      headerRightContainerStyle: {
-        paddingRight: 8,
-      },
+      headerBackVisible: false,
       headerTitleContainerStyle: {
-        paddingRight: 12,
+        paddingRight: Platform.OS === "ios" ? 150 : 92,
       },
-      headerRight: () => <HeaderActions />,
     }),
     [theme]
   );
@@ -79,17 +77,14 @@ const BrowseStackNavigator = () => {
       headerTitleStyle: {
         fontFamily: theme.fonts.headingSemi,
         color: theme.colors.textPrimary,
-        fontSize: Platform.OS === "ios" ? 24 : 24,
+        fontSize: Platform.OS === "ios" ? 22 : 24,
       },
       headerTintColor: theme.colors.textPrimary,
       headerTitleAlign: "left" as const,
-      headerRightContainerStyle: {
-        paddingRight: 8,
-      },
+      headerBackVisible: false,
       headerTitleContainerStyle: {
-        paddingRight: 12,
+        paddingRight: Platform.OS === "ios" ? 150 : 92,
       },
-      headerRight: () => <HeaderActions />,
     }),
     [theme]
   );
@@ -122,17 +117,14 @@ const PredictionStackNavigator = () => {
       headerTitleStyle: {
         fontFamily: theme.fonts.headingSemi,
         color: theme.colors.textPrimary,
-        fontSize: Platform.OS === "ios" ? 24 : 24,
+        fontSize: Platform.OS === "ios" ? 22 : 24,
       },
       headerTintColor: theme.colors.textPrimary,
       headerTitleAlign: "left" as const,
-      headerRightContainerStyle: {
-        paddingRight: 8,
-      },
+      headerBackVisible: false,
       headerTitleContainerStyle: {
-        paddingRight: 12,
+        paddingRight: Platform.OS === "ios" ? 150 : 92,
       },
-      headerRight: () => <HeaderActions />,
     }),
     [theme]
   );
@@ -150,6 +142,7 @@ const PredictionStackNavigator = () => {
 
 export const AppNavigator = () => {
   const { theme, isDark } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const [swipeCoolingDown, setSwipeCoolingDown] = useState(false);
   const swipeCooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialLayout = useMemo(() => ({ width: Dimensions.get("window").width }), []);
@@ -198,77 +191,109 @@ export const AppNavigator = () => {
 
   return (
     <NavigationContainer theme={navTheme} direction="ltr">
-      <Tab.Navigator
-        tabBarPosition="bottom"
-        initialLayout={initialLayout}
-        keyboardDismissMode="on-drag"
-        overScrollMode="never"
-        screenListeners={{
-          swipeEnd: startSwipeCooldown,
-        }}
-        screenOptions={({ route }) => ({
-          headerShown: false,
-          swipeEnabled: swipeEnabledByPlatform && !swipeCoolingDown,
-          animationEnabled: true,
-          sceneStyle: {
-            backgroundColor: theme.colors.background,
-          },
-          tabBarShowIcon: true,
-          tabBarActiveTintColor: theme.colors.accent,
-          tabBarInactiveTintColor: theme.colors.textSecondary,
-          tabBarLabelStyle: {
-            fontFamily: theme.fonts.bodySemi,
-            fontSize: theme.typeScale.caption,
-          },
-          tabBarIndicatorStyle: {
-            backgroundColor: theme.colors.accent,
-            height: 3,
-          },
-          tabBarStyle: {
-            minHeight: APP_TAB_BAR_HEIGHT,
-            paddingTop: 4,
-            paddingBottom: 8,
-            borderTopColor: theme.colors.border,
-            borderTopWidth: 1,
-            backgroundColor: theme.colors.surface,
-          },
-          tabBarIcon: ({ color }) => {
-            const iconByRoute: Record<keyof RootTabParamList, keyof typeof Ionicons.glyphMap> = {
-              HomeTab: "home",
-              BrowseTab: "list",
-              PredictionTab: "sparkles",
-            };
+      <View style={styles.navigatorRoot}>
+        <Tab.Navigator
+          tabBarPosition="bottom"
+          initialLayout={initialLayout}
+          keyboardDismissMode="on-drag"
+          overScrollMode="never"
+          screenListeners={{
+            swipeEnd: startSwipeCooldown,
+          }}
+          screenOptions={({ route }) => ({
+            headerShown: false,
+            swipeEnabled: swipeEnabledByPlatform && !swipeCoolingDown,
+            animationEnabled: true,
+            sceneStyle: {
+              backgroundColor: theme.colors.background,
+            },
+            tabBarShowIcon: true,
+            tabBarActiveTintColor: theme.colors.accent,
+            tabBarInactiveTintColor: theme.colors.textSecondary,
+            tabBarLabelStyle: {
+              fontFamily: theme.fonts.bodySemi,
+              fontSize: theme.typeScale.caption,
+            },
+            tabBarIndicatorStyle: {
+              backgroundColor: theme.colors.accent,
+              height: 3,
+            },
+            tabBarStyle: {
+              minHeight: APP_TAB_BAR_HEIGHT,
+              paddingTop: 4,
+              paddingBottom: 8,
+              borderTopColor: theme.colors.border,
+              borderTopWidth: 1,
+              backgroundColor: theme.colors.surface,
+            },
+            tabBarIcon: ({ color }) => {
+              const iconByRoute: Record<keyof RootTabParamList, keyof typeof Ionicons.glyphMap> = {
+                HomeTab: "home",
+                BrowseTab: "list",
+                PredictionTab: "sparkles",
+              };
 
-            const iconName = iconByRoute[route.name as keyof RootTabParamList];
-            return <Ionicons name={iconName} size={18} color={color} />;
-          },
-        })}
-      >
-        <Tab.Screen
-          name="HomeTab"
-          component={HomeStackNavigator}
-          options={{
-            title: "Home",
-            tabBarButtonTestID: "tab-home",
-          }}
-        />
-        <Tab.Screen
-          name="BrowseTab"
-          component={BrowseStackNavigator}
-          options={{
-            title: "Browse",
-            tabBarButtonTestID: "tab-browse",
-          }}
-        />
-        <Tab.Screen
-          name="PredictionTab"
-          component={PredictionStackNavigator}
-          options={{
-            title: "Prediction",
-            tabBarButtonTestID: "tab-prediction",
-          }}
-        />
-      </Tab.Navigator>
+              const iconName = iconByRoute[route.name as keyof RootTabParamList];
+              return <Ionicons name={iconName} size={18} color={color} />;
+            },
+          })}
+        >
+          <Tab.Screen
+            name="HomeTab"
+            component={HomeStackNavigator}
+            options={{
+              title: "Home",
+              tabBarButtonTestID: "tab-home",
+            }}
+          />
+          <Tab.Screen
+            name="BrowseTab"
+            component={BrowseStackNavigator}
+            options={{
+              title: "Browse",
+              tabBarButtonTestID: "tab-browse",
+            }}
+          />
+          <Tab.Screen
+            name="PredictionTab"
+            component={PredictionStackNavigator}
+            options={{
+              title: "Prediction",
+              tabBarButtonTestID: "tab-prediction",
+            }}
+          />
+        </Tab.Navigator>
+        <View
+          pointerEvents="box-none"
+          style={[styles.headerThemeOverlay, { top: insets.top + 7 }]}
+        >
+          <HeaderActions showTheme showAccount={false} />
+        </View>
+        <View
+          pointerEvents="box-none"
+          style={[styles.headerAccountOverlay, { top: insets.top + 7 }]}
+        >
+          <HeaderActions showTheme={false} showAccount />
+        </View>
+      </View>
     </NavigationContainer>
   );
 };
+
+const styles = StyleSheet.create({
+  navigatorRoot: {
+    flex: 1,
+  },
+  headerThemeOverlay: {
+    position: "absolute",
+    left: 12,
+    zIndex: 100,
+    elevation: 100,
+  },
+  headerAccountOverlay: {
+    position: "absolute",
+    right: 12,
+    zIndex: 100,
+    elevation: 100,
+  },
+});

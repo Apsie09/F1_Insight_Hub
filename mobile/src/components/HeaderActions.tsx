@@ -35,7 +35,17 @@ const formatTimestamp = (value: string): string => {
   return new Date(timestamp).toLocaleString();
 };
 
-export const HeaderActions = () => {
+type HeaderActionsProps = {
+  showTheme?: boolean;
+  showAccount?: boolean;
+  showDataSource?: boolean;
+};
+
+export const HeaderActions = ({
+  showTheme = true,
+  showAccount = true,
+  showDataSource = false,
+}: HeaderActionsProps) => {
   const { theme } = useAppTheme();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -111,19 +121,21 @@ export const HeaderActions = () => {
     setMenuOpen((current) => !current);
   }, []);
 
-  if (status !== "signedIn" || !user) {
+  const shouldShowDataSource = showDataSource && !compactMode;
+
+  if (status !== "signedIn" || !user || !showAccount) {
     return (
       <View style={styles.container}>
-        {!compactMode ? <DataSourceBadge /> : null}
-        <ThemeSwitch />
+        {shouldShowDataSource ? <DataSourceBadge /> : null}
+        {showTheme ? <ThemeSwitch /> : null}
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      {!compactMode ? <DataSourceBadge /> : null}
-      <ThemeSwitch />
+      {shouldShowDataSource ? <DataSourceBadge /> : null}
+      {showTheme ? <ThemeSwitch /> : null}
       <View style={styles.accountWrap}>
         <Pressable
           onPress={toggleMenu}

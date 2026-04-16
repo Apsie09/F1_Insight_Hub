@@ -20,7 +20,6 @@ import type {
 } from "../types/domain";
 import { clamp } from "../utils/format";
 import { SelectMenu } from "./SelectMenu";
-import { SectionHeader } from "./SectionHeader";
 import { YearChipSelector } from "./YearChipSelector";
 
 type PredictionFormProps = {
@@ -137,11 +136,6 @@ export const PredictionForm = ({
 
   return (
     <View style={styles.container}>
-      <SectionHeader
-        title="Prediction Sandbox"
-        subtitle="Interactive calculator wired to the backend prediction service."
-      />
-
       <View style={styles.block}>
         <Text style={styles.label}>Season</Text>
         <YearChipSelector

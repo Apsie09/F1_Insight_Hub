@@ -29,7 +29,7 @@ export const HomeScreen = ({ navigation }: HomeScreenProps) => {
   const tabBarHeight = APP_TAB_BAR_HEIGHT;
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const isCompactWidth = width < 380;
+  const isCompactWidth = width <= 430;
 
   const contentInsets = useMemo(
     () => ({
@@ -90,11 +90,13 @@ export const HomeScreen = ({ navigation }: HomeScreenProps) => {
         <View style={styles.hero}>
           <View style={[styles.heroShapeLarge, isCompactWidth && styles.heroShapeLargeCompact]} />
           <View style={[styles.heroShapeSmall, isCompactWidth && styles.heroShapeSmallCompact]} />
-          <Text style={styles.heroTag}>Telemetry Motorsport UI</Text>
-          <Text style={[styles.heroTitle, isCompactWidth && styles.heroTitleCompact]}>F1 Insight Hub</Text>
-          <Text style={styles.heroSubtitle}>
-            Browse races by season, inspect Top-10 projections, and explore racer-level context.
-          </Text>
+          <View style={styles.heroCopy}>
+            <Text style={styles.heroTag}>Telemetry Motorsport UI</Text>
+            <Text style={[styles.heroTitle, isCompactWidth && styles.heroTitleCompact]}>F1 Insight Hub</Text>
+            <Text style={[styles.heroSubtitle, isCompactWidth && styles.heroSubtitleCompact]}>
+              Browse races by season, inspect Top-10 projections, and explore racer-level context.
+            </Text>
+          </View>
           <View style={[styles.heroActions, isCompactWidth && styles.heroActionsCompact]}>
             <Pressable style={styles.primaryButton} onPress={openBrowse} testID="home-open-browse">
               <Text style={styles.primaryButtonText}>Browse Seasons</Text>
@@ -169,11 +171,12 @@ const createStyles = (theme: AppTheme) =>
       right: -70,
     },
     heroShapeLargeCompact: {
-      width: 170,
-      height: 170,
-      borderRadius: 170,
-      top: -50,
-      right: -56,
+      width: 150,
+      height: 150,
+      borderRadius: 150,
+      top: -44,
+      right: -88,
+      opacity: 0.72,
     },
     heroShapeSmall: {
       position: "absolute",
@@ -197,6 +200,10 @@ const createStyles = (theme: AppTheme) =>
       textTransform: "uppercase",
       letterSpacing: 1.2,
     },
+    heroCopy: {
+      maxWidth: "100%",
+      zIndex: 2,
+    },
     heroTitle: {
       fontFamily: fontFamily.headingBold,
       color: "#FFFFFF",
@@ -204,14 +211,19 @@ const createStyles = (theme: AppTheme) =>
       lineHeight: 46,
     },
     heroTitleCompact: {
-      fontSize: 36,
-      lineHeight: 38,
+      fontSize: 34,
+      lineHeight: 36,
     },
     heroSubtitle: {
       fontFamily: fontFamily.bodyRegular,
       color: theme.colors.heroSubtitle,
       fontSize: theme.typeScale.body,
       lineHeight: 21,
+    },
+    heroSubtitleCompact: {
+      maxWidth: "92%",
+      fontSize: theme.typeScale.bodySmall,
+      lineHeight: 20,
     },
     heroActions: {
       marginTop: theme.spacing.sm,
@@ -281,4 +293,3 @@ const createStyles = (theme: AppTheme) =>
       gap: theme.spacing.sm,
     },
   });
-

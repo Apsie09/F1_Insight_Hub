@@ -86,6 +86,17 @@ export const RacerDetailsScreen = ({ route }: RacerDetailsScreenProps) => {
 
   const { racerDetails, raceDetails } = resource.data;
   const { profile, raceContext } = racerDetails;
+  const teamMomentum = Number(raceContext.constructorMomentum);
+  const momentumLabel =
+    teamMomentum >= 70 ? "Strong" : teamMomentum >= 45 ? "Competitive" : "Low";
+  const circuitSignal =
+    raceContext.avgFinishAtCircuit <= 8
+      ? "positive"
+      : raceContext.avgFinishAtCircuit <= 14
+        ? "neutral"
+        : "risk";
+  const lastFinishSignal =
+    raceContext.lastFinish <= 10 ? "recent points form" : "recent non-points form";
 
   return (
     <ScreenFadeIn>
@@ -126,12 +137,29 @@ export const RacerDetailsScreen = ({ route }: RacerDetailsScreenProps) => {
 
         <SectionHeader
           title="Future Prediction Insights"
-          subtitle="Reserved UI slot for confidence breakdown and model explanation."
+          subtitle="Current model-facing signals for this racer and selected race."
         />
-        <InfoCard title="Placeholder">
-          <Text style={styles.contextCopy}>
-            Backend and ML explanation payloads will surface here once integrated. Current values come from the backend feed.
-          </Text>
+        <InfoCard title="Model Signal Summary" value={`${momentumLabel} team momentum`}>
+          <View style={styles.insightList}>
+            <View style={styles.insightRow}>
+              <View style={styles.insightDot} />
+              <Text style={styles.contextCopy}>
+                Last finish indicates {lastFinishSignal}, which helps contextualize the driver's recent baseline.
+              </Text>
+            </View>
+            <View style={styles.insightRow}>
+              <View style={styles.insightDot} />
+              <Text style={styles.contextCopy}>
+                Circuit history is a {circuitSignal} signal with an average finish of P{raceContext.avgFinishAtCircuit}.
+              </Text>
+            </View>
+            <View style={styles.insightRow}>
+              <View style={styles.insightDot} />
+              <Text style={styles.contextCopy}>
+                Constructor momentum is {raceContext.constructorMomentum}%, reflecting team-level form used around the prediction flow.
+              </Text>
+            </View>
+          </View>
         </InfoCard>
       </ScrollView>
     </ScreenFadeIn>
@@ -184,9 +212,25 @@ const createStyles = (theme: AppTheme) =>
       gap: theme.spacing.sm,
     },
     contextCopy: {
+      flex: 1,
       fontFamily: fontFamily.bodyRegular,
       color: theme.colors.textSecondary,
       fontSize: theme.typeScale.body,
       lineHeight: 22,
+    },
+    insightList: {
+      gap: theme.spacing.sm,
+    },
+    insightRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: theme.spacing.xs,
+    },
+    insightDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 8,
+      backgroundColor: theme.colors.accent,
+      marginTop: 7,
     },
   });

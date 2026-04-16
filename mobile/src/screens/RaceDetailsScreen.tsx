@@ -131,16 +131,6 @@ export const RaceDetailsScreen = ({ route, navigation }: RaceDetailsScreenProps)
             })
           }
         />
-
-        <SectionHeader title="Race Context Blocks" subtitle="Additional telemetry assumptions from the backend feed." />
-        <InfoCard title="Strategic Notes">
-          {context.notes.map((note, index) => (
-            <View key={`${note}-${index}`} style={styles.noteRow}>
-              <View style={styles.noteDot} />
-              <Text style={styles.noteText}>{note}</Text>
-            </View>
-          ))}
-        </InfoCard>
       </ScrollView>
     </ScreenFadeIn>
   );
@@ -188,24 +178,5 @@ const createStyles = (theme: AppTheme) =>
       flexDirection: "row",
       flexWrap: "wrap",
       gap: theme.spacing.sm,
-    },
-    noteRow: {
-      flexDirection: "row",
-      alignItems: "flex-start",
-      gap: theme.spacing.xs,
-    },
-    noteDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 8,
-      backgroundColor: theme.colors.accent,
-      marginTop: 6,
-    },
-    noteText: {
-      flex: 1,
-      fontFamily: fontFamily.bodyRegular,
-      color: theme.colors.textSecondary,
-      fontSize: theme.typeScale.body,
-      lineHeight: 22,
     },
   });

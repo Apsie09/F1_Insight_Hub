@@ -1,5 +1,16 @@
-import { useCallback, useMemo, useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Animated,
+  Easing,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  Vibration,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { EmptyState } from "../components/EmptyState";
@@ -20,6 +31,110 @@ import { formatPercent } from "../utils/format";
 type PredictionPayload = {
   seasons: Awaited<ReturnType<typeof predictionService.getSeasons>>;
   races: Awaited<ReturnType<typeof predictionService.getAllRaces>>;
+};
+
+const MODEL_PRESENTATION_DELAY_MS = 5000;
+const loadingTire = require("../../assets/loading_tire.png");
+
+const wait = (durationMs: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, durationMs);
+  });
+
+const notifyPredictionComplete = () => {
+  Vibration.vibrate(Platform.OS === "ios" ? 80 : [0, 60, 40, 80]);
+};
+
+const PredictionLoadingCard = () => {
+  const { theme } = useAppTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const spin = useRef(new Animated.Value(0)).current;
+  const pulse = useRef(new Animated.Value(0)).current;
+  const progress = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const spinAnimation = Animated.loop(
+      Animated.timing(spin, {
+        toValue: 1,
+        duration: 1200,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    );
+    const pulseAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 700,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0,
+          duration: 700,
+          easing: Easing.in(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    const progressAnimation = Animated.timing(progress, {
+      toValue: 1,
+      duration: MODEL_PRESENTATION_DELAY_MS,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    });
+
+    spinAnimation.start();
+    pulseAnimation.start();
+    progress.setValue(0);
+    progressAnimation.start();
+
+    return () => {
+      spinAnimation.stop();
+      pulseAnimation.stop();
+      progressAnimation.stop();
+    };
+  }, [progress, pulse, spin]);
+
+  const rotate = spin.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "360deg"],
+  });
+  const scale = pulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.08],
+  });
+  const opacity = pulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.72, 1],
+  });
+  const progressWidth = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["8%", "100%"],
+  });
+
+  return (
+    <InfoCard title="Model Running" value="Calculating...">
+      <View style={styles.loadingContent}>
+        <View style={styles.loadingTireFrame}>
+          <Animated.Image
+            source={loadingTire}
+            resizeMode="contain"
+            style={[styles.loadingTire, { transform: [{ rotate }, { scale }], opacity }]}
+          />
+        </View>
+        <View style={styles.loadingCopy}>
+          <Text style={styles.loadingTitle}>Running Top-10 probability model</Text>
+          <Text style={styles.loadingText}>
+            Processing race context, driver form, grid position, and scenario inputs.
+          </Text>
+          <View style={styles.loadingProgressTrack}>
+            <Animated.View style={[styles.loadingProgressFill, { width: progressWidth }]} />
+          </View>
+        </View>
+      </View>
+    </InfoCard>
+  );
 };
 
 export const PredictionScreen = () => {
@@ -58,9 +173,14 @@ export const PredictionScreen = () => {
   const handleSubmit = async (input: CalculatorInput) => {
     setSubmitPending(true);
     setSubmitError(null);
+    setResult(null);
     try {
-      const response = await predictionService.calculatePrediction(input);
+      const [response] = await Promise.all([
+        predictionService.calculatePrediction(input),
+        wait(MODEL_PRESENTATION_DELAY_MS),
+      ]);
       setResult(response);
+      notifyPredictionComplete();
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : "Prediction request failed.");
       setResult(null);
@@ -136,7 +256,10 @@ export const PredictionScreen = () => {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
       >
-        <SectionHeader title="Prediction Calculator" subtitle="Interactive form backed by the backend prediction API." />
+        <SectionHeader
+          title="Prediction Calculator"
+          subtitle="Select a race and driver to calculate model-backed Top-10 finish probability."
+        />
         <PredictionForm
           seasons={resource.data.seasons}
           races={resource.data.races}
@@ -150,7 +273,9 @@ export const PredictionScreen = () => {
 
         {submitError ? <ErrorState message={submitError} /> : null}
 
-        {result ? (
+        {submitPending ? <PredictionLoadingCard /> : null}
+
+        {!submitPending && result ? (
           <InfoCard title="Prediction Result" value={`${formatPercent(result.predictedTop10Probability)} Top-10`}>
             {result.predictionSupport === "historical_estimate" && result.supportMessage ? (
               <View
@@ -177,19 +302,15 @@ export const PredictionScreen = () => {
               ))}
             </View>
           </InfoCard>
-        ) : (
+        ) : null}
+
+        {!submitPending && !result ? (
           <InfoCard title="Result Placeholder">
             <Text style={styles.placeholderText}>
               Submit the form to preview backend prediction confidence and reasoning cards.
             </Text>
           </InfoCard>
-        )}
-
-        <InfoCard title="Future ML Integration Slot">
-          <Text style={styles.placeholderText}>
-            This panel is reserved for API confidence bands, feature contribution details, and model-version metadata.
-          </Text>
-        </InfoCard>
+        ) : null}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -271,5 +392,50 @@ const createStyles = (theme: AppTheme) =>
       color: theme.colors.textSecondary,
       fontSize: theme.typeScale.body,
       lineHeight: 21,
+    },
+    loadingContent: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.md,
+    },
+    loadingTireFrame: {
+      width: 74,
+      height: 74,
+      borderRadius: 74,
+      backgroundColor: theme.colors.surfaceMuted,
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+    },
+    loadingTire: {
+      width: 72,
+      height: 72,
+    },
+    loadingCopy: {
+      flex: 1,
+      gap: theme.spacing.xs,
+    },
+    loadingTitle: {
+      fontFamily: fontFamily.bodyBold,
+      color: theme.colors.textPrimary,
+      fontSize: theme.typeScale.body,
+    },
+    loadingText: {
+      fontFamily: fontFamily.bodyRegular,
+      color: theme.colors.textSecondary,
+      fontSize: theme.typeScale.bodySmall,
+      lineHeight: 20,
+    },
+    loadingProgressTrack: {
+      height: 8,
+      borderRadius: 8,
+      backgroundColor: theme.colors.surfaceMuted,
+      overflow: "hidden",
+      marginTop: theme.spacing.xs,
+    },
+    loadingProgressFill: {
+      height: "100%",
+      borderRadius: 8,
+      backgroundColor: theme.colors.accent,
     },
   });

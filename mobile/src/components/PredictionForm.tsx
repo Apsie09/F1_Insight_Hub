@@ -10,6 +10,7 @@ import {
 
 import { fontFamily } from "../constants/theme";
 import type { AppTheme } from "../constants/theme";
+import { useLanguage } from "../i18n/LanguageProvider";
 import { useAppTheme } from "../theme/AppThemeProvider";
 import type {
   CalculatorInput,
@@ -46,6 +47,7 @@ export const PredictionForm = ({
   onSubmit,
 }: PredictionFormProps) => {
   const { theme } = useAppTheme();
+  const { t } = useLanguage();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { width } = useWindowDimensions();
   const isCompactWidth = width < 380;
@@ -114,12 +116,12 @@ export const PredictionForm = ({
     const parsedGrid = Number(gridPosition);
 
     if (!selectedSeason || !selectedRaceId || !selectedRacerId) {
-      setValidationMessage("Select season, race, and racer before running the prediction.");
+      setValidationMessage(t("formValidateSelection"));
       return;
     }
 
     if (Number.isNaN(parsedGrid) || parsedGrid < 1 || parsedGrid > 20) {
-      setValidationMessage("Grid position must be between 1 and 20.");
+      setValidationMessage(t("formValidateGrid"));
       return;
     }
 
@@ -137,7 +139,7 @@ export const PredictionForm = ({
   return (
     <View style={styles.container}>
       <View style={styles.block}>
-        <Text style={styles.label}>Season</Text>
+        <Text style={styles.label}>{t("formSeason")}</Text>
         <YearChipSelector
           years={seasons.map((season) => season.year)}
           selectedYear={selectedSeason}
@@ -146,11 +148,11 @@ export const PredictionForm = ({
       </View>
 
       <View style={styles.block}>
-        <Text style={styles.label}>Race</Text>
+        <Text style={styles.label}>{t("formRace")}</Text>
         <SelectMenu
           value={selectedRaceId}
-          placeholder="Select race"
-          title="Select race"
+          placeholder={t("selectRace")}
+          title={t("selectRace")}
           options={racesForSeason.map((race) => ({
             label: `R${race.round} - ${race.name}`,
             value: race.id,
@@ -169,26 +171,26 @@ export const PredictionForm = ({
 
       {supportMessage ? (
         <View style={styles.supportBanner}>
-          <Text style={styles.supportTitle}>Historical estimate</Text>
+          <Text style={styles.supportTitle}>{t("calcHistoricalEstimate")}</Text>
           <Text style={styles.supportText}>{supportMessage}</Text>
         </View>
       ) : null}
 
       <View style={styles.block}>
-        <Text style={styles.label}>Racer</Text>
+        <Text style={styles.label}>{t("formRacer")}</Text>
         <TextInput
           value={racerSearch}
           onChangeText={setRacerSearch}
           style={styles.input}
-          placeholder={selectedRaceId ? "Type racer name or team" : "Select race first"}
+          placeholder={selectedRaceId ? t("formRacerSearchReady") : t("formRacerSearchDisabled")}
           placeholderTextColor={theme.colors.textSecondary}
           editable={Boolean(selectedRaceId) && !racersLoading}
           testID="input-racer-search"
         />
         <SelectMenu
           value={selectedRacerId}
-          placeholder="Select racer"
-          title="Select racer"
+          placeholder={t("selectRacer")}
+          title={t("selectRacer")}
           options={filteredRacers.map((racer) => ({
             label: racer.name,
             value: racer.id,
@@ -198,16 +200,16 @@ export const PredictionForm = ({
           triggerTestID="racer-select-trigger"
           optionTestIDPrefix="racer-select-option-"
         />
-        {racersLoading ? <Text style={styles.helperText}>Loading race-specific racers...</Text> : null}
+        {racersLoading ? <Text style={styles.helperText}>{t("formLoadingRacers")}</Text> : null}
         {!racersLoading && racerLoadError ? <Text style={styles.validation}>{racerLoadError}</Text> : null}
         {!racersLoading && !racerLoadError && selectedRaceId && filteredRacers.length === 0 ? (
-          <Text style={styles.helperText}>No racers found for this race/filter combination.</Text>
+          <Text style={styles.helperText}>{t("formNoRacers")}</Text>
         ) : null}
       </View>
 
       <View style={[styles.inputRow, isCompactWidth && styles.inputRowCompact]}>
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Grid Position</Text>
+          <Text style={styles.label}>{t("formGridPosition")}</Text>
           <TextInput
             value={gridPosition}
             onChangeText={setGridPosition}
@@ -220,20 +222,20 @@ export const PredictionForm = ({
           />
         </View>
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Recent Form</Text>
+          <Text style={styles.label}>{t("formRecentForm")}</Text>
           <View style={styles.derivedValueCard}>
             <Text style={styles.derivedValueText}>
               {selectedRacer?.recentFormScore ?? "--"}
             </Text>
             <Text style={styles.derivedValueHint}>
-              Derived from recent rolling points and Top-10 history.
+              {t("formRecentFormHint")}
             </Text>
           </View>
         </View>
       </View>
 
       <View style={styles.block}>
-        <Text style={styles.label}>Weather</Text>
+        <Text style={styles.label}>{t("formWeather")}</Text>
         <View style={[styles.weatherRow, isCompactWidth && styles.weatherRowCompact]}>
           {weatherOptions.map((option) => {
             const selected = option === weatherCondition;
@@ -244,7 +246,9 @@ export const PredictionForm = ({
                 onPress={() => setWeatherCondition(option)}
                 testID={`weather-chip-${option}`}
               >
-                <Text style={[styles.weatherText, selected && styles.weatherTextSelected]}>{option}</Text>
+                <Text style={[styles.weatherText, selected && styles.weatherTextSelected]}>
+                  {option === "Dry" ? t("weatherDry") : option === "Mixed" ? t("weatherMixed") : t("weatherWet")}
+                </Text>
               </Pressable>
             );
           })}
@@ -263,7 +267,7 @@ export const PredictionForm = ({
         disabled={submitting}
         testID="calc-submit-btn"
       >
-        <Text style={styles.submitLabel}>{submitting ? "Calculating..." : "Calculate Prediction"}</Text>
+        <Text style={styles.submitLabel}>{submitting ? t("formSubmitting") : t("formSubmit")}</Text>
       </Pressable>
     </View>
   );

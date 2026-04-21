@@ -12,6 +12,7 @@ import { APP_TAB_BAR_HEIGHT } from "../constants/layout";
 import { fontFamily } from "../constants/theme";
 import type { AppTheme } from "../constants/theme";
 import { useAsyncResource } from "../hooks/useAsyncResource";
+import { useLanguage } from "../i18n/LanguageProvider";
 import { predictionService } from "../services/predictionService";
 import { useAppTheme } from "../theme/AppThemeProvider";
 import type { HomeStackParamList } from "../types/navigation";
@@ -25,6 +26,7 @@ type HomePayload = {
 
 export const HomeScreen = ({ navigation }: HomeScreenProps) => {
   const { theme } = useAppTheme();
+  const { t } = useLanguage();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const tabBarHeight = APP_TAB_BAR_HEIGHT;
   const insets = useSafeAreaInsets();
@@ -65,15 +67,15 @@ export const HomeScreen = ({ navigation }: HomeScreenProps) => {
     }
 
     if (homeResource.status === "error") {
-      return <ErrorState message={homeResource.error ?? "Unable to load dashboard."} onRetry={homeResource.refresh} />;
+      return <ErrorState message={homeResource.error ?? t("homeLoadError")} onRetry={homeResource.refresh} />;
     }
 
     if (homeResource.status === "empty" || !homeResource.data) {
       return (
         <EmptyState
-          title="No season feed"
-          message="No season data is available from the current source. Seed backend race data or allow mock fallback."
-          actionLabel="Reload"
+          title={t("homeEmptyTitle")}
+          message={t("homeEmptyMessage")}
+          actionLabel={t("commonReload")}
           onAction={homeResource.refresh}
         />
       );
@@ -91,34 +93,34 @@ export const HomeScreen = ({ navigation }: HomeScreenProps) => {
           <View style={[styles.heroShapeLarge, isCompactWidth && styles.heroShapeLargeCompact]} />
           <View style={[styles.heroShapeSmall, isCompactWidth && styles.heroShapeSmallCompact]} />
           <View style={styles.heroCopy}>
-            <Text style={styles.heroTag}>Telemetry Motorsport UI</Text>
+            <Text style={styles.heroTag}>{t("homeHeroTag")}</Text>
             <Text style={[styles.heroTitle, isCompactWidth && styles.heroTitleCompact]}>F1 Insight Hub</Text>
             <Text style={[styles.heroSubtitle, isCompactWidth && styles.heroSubtitleCompact]}>
-              Browse races by season, inspect Top-10 projections, and explore racer-level context.
+              {t("homeHeroSubtitle")}
             </Text>
           </View>
           <View style={[styles.heroActions, isCompactWidth && styles.heroActionsCompact]}>
             <Pressable style={styles.primaryButton} onPress={openBrowse} testID="home-open-browse">
-              <Text style={styles.primaryButtonText}>Browse Seasons</Text>
+              <Text style={styles.primaryButtonText}>{t("homeBrowseSeasons")}</Text>
             </Pressable>
             <Pressable style={styles.secondaryButton} onPress={openPrediction} testID="home-open-prediction">
-              <Text style={styles.secondaryButtonText}>Open Calculator</Text>
+              <Text style={styles.secondaryButtonText}>{t("homeOpenCalculator")}</Text>
             </Pressable>
           </View>
         </View>
 
         <View style={[styles.metricRow, isCompactWidth && styles.metricRowCompact]}>
           <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Active Seasons</Text>
+            <Text style={styles.metricLabel}>{t("homeActiveSeasons")}</Text>
             <Text style={styles.metricValue}>{seasons.length}</Text>
           </View>
           <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Tracked Races</Text>
+            <Text style={styles.metricLabel}>{t("homeTrackedRaces")}</Text>
             <Text style={styles.metricValue}>{seasons.reduce((total, season) => total + season.totalRaces, 0)}</Text>
           </View>
         </View>
 
-        <SectionHeader title="Featured Race Boards" subtitle="Direct links into race-level prediction details." />
+        <SectionHeader title={t("homeFeaturedTitle")} subtitle={t("homeFeaturedSubtitle")} />
         <View style={styles.featuredList}>
           {featuredRaces.map((race) => (
             <RaceCard

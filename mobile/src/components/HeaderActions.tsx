@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../auth/AuthProvider";
 import type { AppTheme } from "../constants/theme";
 import { fontFamily } from "../constants/theme";
+import { useLanguage } from "../i18n/LanguageProvider";
 import { useAppTheme } from "../theme/AppThemeProvider";
 import { DataSourceBadge } from "./DataSourceBadge";
 import { ThemeSwitch } from "./ThemeSwitch";
@@ -38,15 +39,18 @@ const formatTimestamp = (value: string): string => {
 type HeaderActionsProps = {
   showTheme?: boolean;
   showAccount?: boolean;
+  showLanguage?: boolean;
   showDataSource?: boolean;
 };
 
 export const HeaderActions = ({
   showTheme = true,
   showAccount = true,
+  showLanguage = false,
   showDataSource = false,
 }: HeaderActionsProps) => {
   const { theme } = useAppTheme();
+  const { language, toggleLanguage, t } = useLanguage();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -93,11 +97,11 @@ export const HeaderActions = ({
 
   const handleResetPassword = useCallback(async () => {
     if (newPassword.length < 8) {
-      setLocalMessage("New password must be at least 8 characters.");
+      setLocalMessage(t("accountNewPasswordShort"));
       return;
     }
     if (confirmNewPassword !== newPassword) {
-      setLocalMessage("New passwords do not match.");
+      setLocalMessage(t("accountNewPasswordsMismatch"));
       return;
     }
     const ok = await resetPassword({
@@ -109,9 +113,9 @@ export const HeaderActions = ({
       setNewPassword("");
       setConfirmNewPassword("");
       setPasswordPanelOpen(false);
-      setLocalMessage("Password updated.");
+      setLocalMessage(t("accountPasswordUpdated"));
     }
-  }, [confirmNewPassword, currentPassword, newPassword, resetPassword]);
+  }, [confirmNewPassword, currentPassword, newPassword, resetPassword, t]);
 
   const handleMarkNotificationsRead = useCallback(async () => {
     await markNotificationsRead();
@@ -127,6 +131,20 @@ export const HeaderActions = ({
     return (
       <View style={styles.container}>
         {shouldShowDataSource ? <DataSourceBadge /> : null}
+        {showLanguage ? (
+          <Pressable
+            onPress={toggleLanguage}
+            hitSlop={6}
+            style={({ pressed }) => [styles.languageButton, pressed && styles.accountButtonPressed]}
+            accessibilityRole="button"
+            accessibilityLabel={t("languageToggleLabel")}
+            testID="header-language-button"
+          >
+            <Text style={styles.languageButtonText}>
+              {language === "en" ? t("languageBulgarian") : t("languageEnglish")}
+            </Text>
+          </Pressable>
+        ) : null}
         {showTheme ? <ThemeSwitch /> : null}
       </View>
     );
@@ -135,6 +153,20 @@ export const HeaderActions = ({
   return (
     <View style={styles.container}>
       {shouldShowDataSource ? <DataSourceBadge /> : null}
+      {showLanguage ? (
+        <Pressable
+          onPress={toggleLanguage}
+          hitSlop={6}
+          style={({ pressed }) => [styles.languageButton, pressed && styles.accountButtonPressed]}
+          accessibilityRole="button"
+          accessibilityLabel={t("languageToggleLabel")}
+          testID="header-language-button"
+        >
+          <Text style={styles.languageButtonText}>
+            {language === "en" ? t("languageBulgarian") : t("languageEnglish")}
+          </Text>
+        </Pressable>
+      ) : null}
       {showTheme ? <ThemeSwitch /> : null}
       <View style={styles.accountWrap}>
         <Pressable
@@ -146,7 +178,7 @@ export const HeaderActions = ({
             pressed && styles.accountButtonPressed,
           ]}
           accessibilityRole="button"
-          accessibilityLabel="Open account menu"
+          accessibilityLabel={t("accountOpenMenu")}
           testID="header-account-button"
         >
           <View style={styles.avatar}>
@@ -191,7 +223,7 @@ export const HeaderActions = ({
 
               <View style={styles.section}>
                 <View style={styles.sectionHeaderRow}>
-                  <Text style={styles.sectionTitle}>Notifications</Text>
+                  <Text style={styles.sectionTitle}>{t("accountNotifications")}</Text>
                   {unreadNotificationCount > 0 ? (
                     <Pressable
                       onPress={() => void handleMarkNotificationsRead()}
@@ -199,12 +231,12 @@ export const HeaderActions = ({
                       testID="header-notifications-read-button"
                     >
                       <Ionicons name="mail-open-outline" size={16} color={theme.colors.textPrimary} />
-                      <Text style={styles.inlineActionText}>Mark all read</Text>
+                      <Text style={styles.inlineActionText}>{t("accountMarkAllRead")}</Text>
                     </Pressable>
                   ) : null}
                 </View>
                 {notifications.length === 0 ? (
-                  <Text style={styles.emptyState}>No account notifications yet.</Text>
+                  <Text style={styles.emptyState}>{t("accountNoNotifications")}</Text>
                 ) : (
                   notifications.slice(0, 5).map((notification) => (
                     <View key={notification.id} style={styles.notificationCard}>
@@ -230,7 +262,7 @@ export const HeaderActions = ({
                   testID="header-password-toggle-button"
                 >
                   <Ionicons name="key-outline" size={16} color={theme.colors.textPrimary} />
-                  <Text style={styles.menuActionText}>Reset password</Text>
+                  <Text style={styles.menuActionText}>{t("accountResetPassword")}</Text>
                 </Pressable>
 
                 {passwordPanelOpen ? (
@@ -239,7 +271,7 @@ export const HeaderActions = ({
                       value={currentPassword}
                       onChangeText={setCurrentPassword}
                       style={styles.input}
-                      placeholder="Current password"
+                      placeholder={t("accountCurrentPassword")}
                       placeholderTextColor={theme.colors.textSecondary}
                       secureTextEntry
                       autoCapitalize="none"
@@ -249,7 +281,7 @@ export const HeaderActions = ({
                       value={newPassword}
                       onChangeText={setNewPassword}
                       style={styles.input}
-                      placeholder="New password"
+                      placeholder={t("accountNewPassword")}
                       placeholderTextColor={theme.colors.textSecondary}
                       secureTextEntry
                       autoCapitalize="none"
@@ -259,7 +291,7 @@ export const HeaderActions = ({
                       value={confirmNewPassword}
                       onChangeText={setConfirmNewPassword}
                       style={styles.input}
-                      placeholder="Confirm new password"
+                      placeholder={t("accountConfirmNewPassword")}
                       placeholderTextColor={theme.colors.textSecondary}
                       secureTextEntry
                       autoCapitalize="none"
@@ -275,7 +307,7 @@ export const HeaderActions = ({
                       ]}
                       testID="header-password-submit-button"
                     >
-                      <Text style={styles.primaryActionText}>Update password</Text>
+                      <Text style={styles.primaryActionText}>{t("accountUpdatePassword")}</Text>
                     </Pressable>
                   </View>
                 ) : null}
@@ -290,7 +322,20 @@ export const HeaderActions = ({
                 testID="header-switch-account-button"
               >
                 <Ionicons name="swap-horizontal-outline" size={16} color={theme.colors.textPrimary} />
-                <Text style={styles.menuActionText}>Switch account</Text>
+                <Text style={styles.menuActionText}>{t("accountSwitch")}</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={toggleLanguage}
+                style={({ pressed }) => [styles.menuAction, pressed && styles.menuActionPressed]}
+                accessibilityRole="button"
+                accessibilityLabel={t("languageToggleLabel")}
+                testID="header-language-button"
+              >
+                <Ionicons name="language-outline" size={16} color={theme.colors.textPrimary} />
+                <Text style={styles.menuActionText}>
+                  {t("accountLanguage")}: {language === "en" ? t("languageBulgarian") : t("languageEnglish")}
+                </Text>
               </Pressable>
 
               <Pressable
@@ -299,7 +344,7 @@ export const HeaderActions = ({
                 testID="header-signout-button"
               >
                 <Ionicons name="log-out-outline" size={16} color={theme.colors.textPrimary} />
-                <Text style={styles.menuActionText}>Log out</Text>
+                <Text style={styles.menuActionText}>{t("accountLogout")}</Text>
               </Pressable>
             </ScrollView>
           </View>
@@ -319,6 +364,22 @@ const createStyles = (theme: AppTheme) =>
     },
     accountWrap: {
       position: "relative",
+    },
+    languageButton: {
+      minHeight: 36,
+      minWidth: 42,
+      borderRadius: theme.radius.pill,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: theme.spacing.sm,
+    },
+    languageButtonText: {
+      fontFamily: fontFamily.bodyBold,
+      color: theme.colors.textPrimary,
+      fontSize: theme.typeScale.bodySmall,
     },
     menuBackdrop: {
       flex: 1,

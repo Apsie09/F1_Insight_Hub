@@ -17,6 +17,7 @@ import {
 import { useAuth } from "../auth/AuthProvider";
 import { fontFamily } from "../constants/theme";
 import type { AppTheme } from "../constants/theme";
+import { useLanguage } from "../i18n/LanguageProvider";
 import { useAppTheme } from "../theme/AppThemeProvider";
 import type { AuthMode } from "../types/auth";
 
@@ -24,6 +25,7 @@ const isValidEmail = (email: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.te
 
 export const AuthOverlay = () => {
   const { theme } = useAppTheme();
+  const { t } = useLanguage();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { status, login, register, isSubmitting, error, clearError } = useAuth();
 
@@ -80,22 +82,22 @@ export const AuthOverlay = () => {
     const trimmedName = displayName.trim();
 
     if (!isValidEmail(normalizedEmail)) {
-      setValidationMessage("Enter a valid email address.");
+      setValidationMessage(t("authInvalidEmail"));
       return;
     }
 
     if (password.length < 8) {
-      setValidationMessage("Password must be at least 8 characters.");
+      setValidationMessage(t("authPasswordShort"));
       return;
     }
 
     if (mode === "register" && confirmPassword !== password) {
-      setValidationMessage("Passwords do not match.");
+      setValidationMessage(t("authPasswordsMismatch"));
       return;
     }
 
     if (mode === "register" && !trimmedName) {
-      setValidationMessage("Enter your display name.");
+      setValidationMessage(t("authMissingName"));
       return;
     }
 
@@ -147,7 +149,7 @@ export const AuthOverlay = () => {
     outputRange: [0, 86],
   });
 
-  const submitLabel = mode === "login" ? "Log In" : "Create Account";
+  const submitLabel = mode === "login" ? t("authLogin") : t("authCreateAccount");
 
   return (
     <View style={styles.overlayRoot} testID="auth-overlay">
@@ -171,11 +173,9 @@ export const AuthOverlay = () => {
               },
             ]}
           >
-            <Text style={styles.eyebrow}>Race Control Access</Text>
-            <Text style={styles.title}>F1 Insight Hub Login</Text>
-            <Text style={styles.subtitle}>
-              Sign in before browsing seasons, race predictions, and racer context.
-            </Text>
+            <Text style={styles.eyebrow}>{t("authEyebrow")}</Text>
+            <Text style={styles.title}>{t("authTitle")}</Text>
+            <Text style={styles.subtitle}>{t("authSubtitle")}</Text>
 
             <View style={styles.modeRow} onLayout={onModeTrackLayout}>
               <Animated.View
@@ -190,7 +190,9 @@ export const AuthOverlay = () => {
                 ]}
               />
               <Pressable style={styles.modeChip} onPress={() => switchMode("login")} testID="auth-mode-login">
-                <Text style={[styles.modeLabel, mode === "login" && styles.modeLabelSelected]}>Log In</Text>
+                <Text style={[styles.modeLabel, mode === "login" && styles.modeLabelSelected]}>
+                  {t("authLogin")}
+                </Text>
               </Pressable>
               <Pressable
                 style={styles.modeChip}
@@ -198,7 +200,7 @@ export const AuthOverlay = () => {
                 testID="auth-mode-register"
               >
                 <Text style={[styles.modeLabel, mode === "register" && styles.modeLabelSelected]}>
-                  Create Account
+                  {t("authCreateAccount")}
                 </Text>
               </Pressable>
             </View>
@@ -214,14 +216,14 @@ export const AuthOverlay = () => {
               pointerEvents={mode === "register" ? "auto" : "none"}
             >
               <View style={styles.fieldBlock}>
-                <Text style={styles.label}>Display Name</Text>
+                <Text style={styles.label}>{t("authDisplayName")}</Text>
                 <TextInput
                   value={displayName}
                   onChangeText={setDisplayName}
                   style={styles.input}
                   autoCapitalize="words"
                   autoCorrect={false}
-                  placeholder="Your name"
+                  placeholder={t("authDisplayNamePlaceholder")}
                   placeholderTextColor={theme.colors.textSecondary}
                   testID="auth-input-display-name"
                 />
@@ -229,7 +231,7 @@ export const AuthOverlay = () => {
             </Animated.View>
 
             <View style={styles.fieldBlock}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>{t("authEmail")}</Text>
               <TextInput
                 value={email}
                 onChangeText={setEmail}
@@ -245,7 +247,7 @@ export const AuthOverlay = () => {
             </View>
 
             <View style={styles.fieldBlock}>
-              <Text style={styles.label}>Password</Text>
+              <Text style={styles.label}>{t("authPassword")}</Text>
               <TextInput
                 value={password}
                 onChangeText={setPassword}
@@ -254,7 +256,7 @@ export const AuthOverlay = () => {
                 autoCapitalize="none"
                 autoCorrect={false}
                 textContentType={mode === "login" ? "password" : "newPassword"}
-                placeholder="Minimum 8 characters"
+                placeholder={t("authPasswordPlaceholder")}
                 placeholderTextColor={theme.colors.textSecondary}
                 testID="auth-input-password"
               />
@@ -262,7 +264,7 @@ export const AuthOverlay = () => {
 
             {mode === "register" ? (
               <View style={styles.fieldBlock}>
-                <Text style={styles.label}>Confirm Password</Text>
+                <Text style={styles.label}>{t("authConfirmPassword")}</Text>
                 <TextInput
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
@@ -271,7 +273,7 @@ export const AuthOverlay = () => {
                   autoCapitalize="none"
                   autoCorrect={false}
                   textContentType="newPassword"
-                  placeholder="Repeat your password"
+                  placeholder={t("authConfirmPasswordPlaceholder")}
                   placeholderTextColor={theme.colors.textSecondary}
                   testID="auth-input-confirm-password"
                 />
@@ -294,7 +296,7 @@ export const AuthOverlay = () => {
               {isSubmitting ? (
                 <View style={styles.submitContent}>
                   <ActivityIndicator size="small" color={theme.colors.surface} />
-                  <Text style={styles.submitText}>Submitting...</Text>
+                  <Text style={styles.submitText}>{t("authSubmitting")}</Text>
                 </View>
               ) : (
                 <Text style={styles.submitText}>{submitLabel}</Text>
@@ -302,7 +304,7 @@ export const AuthOverlay = () => {
             </Pressable>
 
             <Text style={styles.footnote}>
-              Accounts are stored in the backend database when API mode is enabled.
+              {t("authFootnote")}
             </Text>
           </Animated.View>
         </ScrollView>

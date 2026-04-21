@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HeaderActions } from "../components/HeaderActions";
 import { APP_TAB_BAR_HEIGHT } from "../constants/layout";
+import { useLanguage } from "../i18n/LanguageProvider";
 import { HomeScreen } from "../screens/HomeScreen";
 import { PredictionScreen } from "../screens/PredictionScreen";
 import { RaceBrowserScreen } from "../screens/RaceBrowserScreen";
@@ -32,6 +33,7 @@ const PredictionStack = createNativeStackNavigator<PredictionStackParamList>();
 
 const HomeStackNavigator = () => {
   const { theme } = useAppTheme();
+  const { t } = useLanguage();
 
   const sharedStackOptions = useMemo(
     () => ({
@@ -56,11 +58,11 @@ const HomeStackNavigator = () => {
   return (
     <HomeStack.Navigator screenOptions={sharedStackOptions}>
       <HomeStack.Screen name="Home" component={HomeScreen} options={{ title: "F1 Insight Hub" }} />
-      <HomeStack.Screen name="RaceDetails" component={RaceDetailsScreen} options={{ title: "Race Details" }} />
+      <HomeStack.Screen name="RaceDetails" component={RaceDetailsScreen} options={{ title: t("navRaceDetails") }} />
       <HomeStack.Screen
         name="RacerDetails"
         component={RacerDetailsScreen}
-        options={{ title: "Racer Intelligence" }}
+        options={{ title: t("navRacerDetails") }}
       />
     </HomeStack.Navigator>
   );
@@ -68,6 +70,7 @@ const HomeStackNavigator = () => {
 
 const BrowseStackNavigator = () => {
   const { theme } = useAppTheme();
+  const { t } = useLanguage();
 
   const sharedStackOptions = useMemo(
     () => ({
@@ -94,13 +97,13 @@ const BrowseStackNavigator = () => {
       <BrowseStack.Screen
         name="RaceBrowser"
         component={RaceBrowserScreen}
-        options={{ title: "Season Race Browser" }}
+        options={{ title: t("navRaceBrowser") }}
       />
-      <BrowseStack.Screen name="RaceDetails" component={RaceDetailsScreen} options={{ title: "Race Details" }} />
+      <BrowseStack.Screen name="RaceDetails" component={RaceDetailsScreen} options={{ title: t("navRaceDetails") }} />
       <BrowseStack.Screen
         name="RacerDetails"
         component={RacerDetailsScreen}
-        options={{ title: "Racer Intelligence" }}
+        options={{ title: t("navRacerDetails") }}
       />
     </BrowseStack.Navigator>
   );
@@ -108,6 +111,7 @@ const BrowseStackNavigator = () => {
 
 const PredictionStackNavigator = () => {
   const { theme } = useAppTheme();
+  const { t } = useLanguage();
 
   const sharedStackOptions = useMemo(
     () => ({
@@ -134,7 +138,7 @@ const PredictionStackNavigator = () => {
       <PredictionStack.Screen
         name="Prediction"
         component={PredictionScreen}
-        options={{ title: "Prediction Calculator" }}
+        options={{ title: t("navPrediction") }}
       />
     </PredictionStack.Navigator>
   );
@@ -142,6 +146,7 @@ const PredictionStackNavigator = () => {
 
 export const AppNavigator = () => {
   const { theme, isDark } = useAppTheme();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const [swipeCoolingDown, setSwipeCoolingDown] = useState(false);
   const swipeCooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -242,7 +247,7 @@ export const AppNavigator = () => {
             name="HomeTab"
             component={HomeStackNavigator}
             options={{
-              title: "Home",
+              title: t("navHome"),
               tabBarButtonTestID: "tab-home",
             }}
           />
@@ -250,7 +255,7 @@ export const AppNavigator = () => {
             name="BrowseTab"
             component={BrowseStackNavigator}
             options={{
-              title: "Browse",
+              title: t("navBrowse"),
               tabBarButtonTestID: "tab-browse",
             }}
           />
@@ -258,7 +263,7 @@ export const AppNavigator = () => {
             name="PredictionTab"
             component={PredictionStackNavigator}
             options={{
-              title: "Prediction",
+              title: t("navPrediction"),
               tabBarButtonTestID: "tab-prediction",
             }}
           />

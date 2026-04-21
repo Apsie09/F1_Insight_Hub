@@ -3,10 +3,6 @@ import "react-native-gesture-handler";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
 import {
-  BarlowCondensed_600SemiBold,
-  BarlowCondensed_700Bold,
-} from "@expo-google-fonts/barlow-condensed";
-import {
   SourceSans3_400Regular,
   SourceSans3_600SemiBold,
   SourceSans3_700Bold,
@@ -18,11 +14,13 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "./src/auth/AuthProvider";
 import { AuthOverlay } from "./src/components/AuthOverlay";
 import { lightTheme } from "./src/constants/theme";
+import { LanguageProvider, useLanguage } from "./src/i18n/LanguageProvider";
 import { AppNavigator } from "./src/navigation/AppNavigator";
 import { AppThemeProvider, useAppTheme } from "./src/theme/AppThemeProvider";
 
 const ThemedApp = () => {
   const { isDark, theme, transitionOpacity, transitionOverlayColor } = useAppTheme();
+  const { t } = useLanguage();
   const { status } = useAuth();
   const shouldRenderAuthGate =
     process.env.NODE_ENV !== "test" || process.env.EXPO_PUBLIC_TEST_AUTH_GATE === "enabled";
@@ -38,7 +36,7 @@ const ThemedApp = () => {
           {status === "restoring" ? (
             <View style={styles.restoreState}>
               <ActivityIndicator color={theme.colors.accent} />
-              <Text style={[styles.restoreText, { color: theme.colors.textSecondary }]}>Restoring session...</Text>
+              <Text style={[styles.restoreText, { color: theme.colors.textSecondary }]}>{t("restoringSession")}</Text>
             </View>
           ) : null}
         </View>
@@ -60,8 +58,6 @@ const ThemedApp = () => {
 
 export default function App() {
   const [fontsLoaded] = useFonts({
-    [lightTheme.fonts.headingSemi]: BarlowCondensed_600SemiBold,
-    [lightTheme.fonts.headingBold]: BarlowCondensed_700Bold,
     [lightTheme.fonts.bodyRegular]: SourceSans3_400Regular,
     [lightTheme.fonts.bodySemi]: SourceSans3_600SemiBold,
     [lightTheme.fonts.bodyBold]: SourceSans3_700Bold,
@@ -75,9 +71,11 @@ export default function App() {
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
         <AppThemeProvider>
-          <AuthProvider>
-            <ThemedApp />
-          </AuthProvider>
+          <LanguageProvider>
+            <AuthProvider>
+              <ThemedApp />
+            </AuthProvider>
+          </LanguageProvider>
         </AppThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

@@ -23,6 +23,7 @@ import { APP_TAB_BAR_HEIGHT } from "../constants/layout";
 import { fontFamily } from "../constants/theme";
 import type { AppTheme } from "../constants/theme";
 import { useAsyncResource } from "../hooks/useAsyncResource";
+import { useLanguage } from "../i18n/LanguageProvider";
 import { predictionService } from "../services/predictionService";
 import { useAppTheme } from "../theme/AppThemeProvider";
 import type { CalculatorInput, CalculatorResult, RacerProfile } from "../types/domain";
@@ -33,7 +34,7 @@ type PredictionPayload = {
   races: Awaited<ReturnType<typeof predictionService.getAllRaces>>;
 };
 
-const MODEL_PRESENTATION_DELAY_MS = 5000;
+const MODEL_PRESENTATION_DELAY_MS = process.env.NODE_ENV === "test" ? 0 : 5000;
 const loadingTire = require("../../assets/loading_tire.png");
 
 const wait = (durationMs: number): Promise<void> =>
@@ -47,6 +48,7 @@ const notifyPredictionComplete = () => {
 
 const PredictionLoadingCard = () => {
   const { theme } = useAppTheme();
+  const { t } = useLanguage();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const spin = useRef(new Animated.Value(0)).current;
   const pulse = useRef(new Animated.Value(0)).current;
@@ -114,7 +116,7 @@ const PredictionLoadingCard = () => {
   });
 
   return (
-    <InfoCard title="Model Running" value="Calculating...">
+    <InfoCard title={t("calcModelRunning")} value={t("calcCalculating")}>
       <View style={styles.loadingContent}>
         <View style={styles.loadingTireFrame}>
           <Animated.Image
@@ -124,10 +126,8 @@ const PredictionLoadingCard = () => {
           />
         </View>
         <View style={styles.loadingCopy}>
-          <Text style={styles.loadingTitle}>Running Top-10 probability model</Text>
-          <Text style={styles.loadingText}>
-            Processing race context, driver form, grid position, and scenario inputs.
-          </Text>
+          <Text style={styles.loadingTitle}>{t("calcRunningTitle")}</Text>
+          <Text style={styles.loadingText}>{t("calcRunningText")}</Text>
           <View style={styles.loadingProgressTrack}>
             <Animated.View style={[styles.loadingProgressFill, { width: progressWidth }]} />
           </View>
@@ -139,6 +139,7 @@ const PredictionLoadingCard = () => {
 
 export const PredictionScreen = () => {
   const { theme } = useAppTheme();
+  const { t } = useLanguage();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [submitPending, setSubmitPending] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -182,7 +183,7 @@ export const PredictionScreen = () => {
       setResult(response);
       notifyPredictionComplete();
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "Prediction request failed.");
+      setSubmitError(error instanceof Error ? error.message : t("calcRequestFailed"));
       setResult(null);
     } finally {
       setSubmitPending(false);
@@ -206,7 +207,7 @@ export const PredictionScreen = () => {
         setAvailableRacers(participants);
       } catch (error) {
         setAvailableRacers([]);
-        setRacerLoadError(error instanceof Error ? error.message : "Unable to load racers for this race.");
+        setRacerLoadError(error instanceof Error ? error.message : t("calcRacersLoadFailed"));
       } finally {
         setRacersLoading(false);
       }
@@ -217,7 +218,7 @@ export const PredictionScreen = () => {
   if (resource.status === "loading" || resource.status === "idle") {
     return (
       <View style={[styles.stateContainer, contentInsets]}>
-        <LoadingState label="Booting calculator controls..." />
+        <LoadingState label={t("calcBooting")} />
       </View>
     );
   }
@@ -225,7 +226,7 @@ export const PredictionScreen = () => {
   if (resource.status === "error") {
     return (
       <View style={[styles.stateContainer, contentInsets]}>
-        <ErrorState message={resource.error ?? "Calculator data unavailable."} onRetry={resource.refresh} />
+        <ErrorState message={resource.error ?? t("calcDataUnavailable")} onRetry={resource.refresh} />
       </View>
     );
   }
@@ -234,9 +235,9 @@ export const PredictionScreen = () => {
     return (
       <View style={[styles.stateContainer, contentInsets]}>
         <EmptyState
-          title="Calculator feed empty"
-          message="Seasons, races, or racers are missing in the backend response."
-          actionLabel="Reload"
+          title={t("calcEmptyTitle")}
+          message={t("calcEmptyMessage")}
+          actionLabel={t("commonReload")}
           onAction={resource.refresh}
         />
       </View>
@@ -257,8 +258,8 @@ export const PredictionScreen = () => {
         keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
       >
         <SectionHeader
-          title="Prediction Calculator"
-          subtitle="Select a race and driver to calculate model-backed Top-10 finish probability."
+          title={t("calcTitle")}
+          subtitle={t("calcSubtitle")}
         />
         <PredictionForm
           seasons={resource.data.seasons}
@@ -276,7 +277,7 @@ export const PredictionScreen = () => {
         {submitPending ? <PredictionLoadingCard /> : null}
 
         {!submitPending && result ? (
-          <InfoCard title="Prediction Result" value={`${formatPercent(result.predictedTop10Probability)} Top-10`}>
+          <InfoCard title={t("calcResultTitle")} value={`${formatPercent(result.predictedTop10Probability)} Top-10`}>
             {result.predictionSupport === "historical_estimate" && result.supportMessage ? (
               <View
                 style={[
@@ -285,13 +286,13 @@ export const PredictionScreen = () => {
                 ]}
               >
                 <Text style={styles.supportTitle}>
-                  Historical estimate
+                  {t("calcHistoricalEstimate")}
                 </Text>
                 <Text style={styles.supportText}>{result.supportMessage}</Text>
               </View>
             ) : null}
             <Text style={styles.resultMeta}>
-              {result.racerName} - Confidence: {result.confidence}
+              {result.racerName} - {t("commonConfidence")}: {result.confidence}
             </Text>
             <View style={styles.reasoningList}>
               {result.reasoning.map((reason, index) => (
@@ -305,9 +306,9 @@ export const PredictionScreen = () => {
         ) : null}
 
         {!submitPending && !result ? (
-          <InfoCard title="Result Placeholder">
+          <InfoCard title={t("calcResultPlaceholder")}>
             <Text style={styles.placeholderText}>
-              Submit the form to preview backend prediction confidence and reasoning cards.
+              {t("calcResultPlaceholderText")}
             </Text>
           </InfoCard>
         ) : null}

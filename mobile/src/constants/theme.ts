@@ -26,8 +26,8 @@ const sharedTheme = {
     },
   },
   fonts: {
-    headingBold: "BarlowCondensed_700Bold",
-    headingSemi: "BarlowCondensed_600SemiBold",
+    headingBold: "SourceSans3_700Bold",
+    headingSemi: "SourceSans3_600SemiBold",
     bodyRegular: "SourceSans3_400Regular",
     bodySemi: "SourceSans3_600SemiBold",
     bodyBold: "SourceSans3_700Bold",

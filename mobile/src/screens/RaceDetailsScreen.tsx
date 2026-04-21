@@ -14,6 +14,7 @@ import { APP_TAB_BAR_HEIGHT } from "../constants/layout";
 import { fontFamily } from "../constants/theme";
 import type { AppTheme } from "../constants/theme";
 import { useAsyncResource } from "../hooks/useAsyncResource";
+import { useLanguage } from "../i18n/LanguageProvider";
 import { predictionService } from "../services/predictionService";
 import { useAppTheme } from "../theme/AppThemeProvider";
 import type { RaceDetailsParams } from "../types/navigation";
@@ -33,6 +34,7 @@ type RaceDetailPayload = {
 
 export const RaceDetailsScreen = ({ route, navigation }: RaceDetailsScreenProps) => {
   const { theme } = useAppTheme();
+  const { t } = useLanguage();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { raceId } = route.params;
   const tabBarHeight = APP_TAB_BAR_HEIGHT;
@@ -64,7 +66,7 @@ export const RaceDetailsScreen = ({ route, navigation }: RaceDetailsScreenProps)
   if (resource.status === "loading" || resource.status === "idle") {
     return (
       <View style={[styles.stateContainer, contentInsets]}>
-        <LoadingState label="Preparing race board..." />
+        <LoadingState label={t("detailsPreparing")} />
       </View>
     );
   }
@@ -72,7 +74,7 @@ export const RaceDetailsScreen = ({ route, navigation }: RaceDetailsScreenProps)
   if (resource.status === "error") {
     return (
       <View style={[styles.stateContainer, contentInsets]}>
-        <ErrorState message={resource.error ?? "Race detail load failed."} onRetry={resource.refresh} />
+        <ErrorState message={resource.error ?? t("detailsLoadError")} onRetry={resource.refresh} />
       </View>
     );
   }
@@ -81,9 +83,9 @@ export const RaceDetailsScreen = ({ route, navigation }: RaceDetailsScreenProps)
     return (
       <View style={[styles.stateContainer, contentInsets]}>
         <EmptyState
-          title="No Top-10 entries"
-          message="Prediction rows are empty for this race in the current backend response."
-          actionLabel="Reload"
+          title={t("detailsEmptyTitle")}
+          message={t("detailsEmptyMessage")}
+          actionLabel={t("commonReload")}
           onAction={resource.refresh}
         />
       </View>
@@ -103,7 +105,7 @@ export const RaceDetailsScreen = ({ route, navigation }: RaceDetailsScreenProps)
         <View style={styles.hero}>
           <Text style={styles.heroTitle}>{race.name}</Text>
           <Text style={styles.heroSubTitle}>
-            Season {race.season} - Round {race.round} - {formatDate(race.date)}
+            {t("detailsSeason")} {race.season} - {t("commonRound")} {race.round} - {formatDate(race.date)}
           </Text>
           <Text style={styles.heroMeta}>
             {race.circuit} - {race.country}
@@ -111,16 +113,16 @@ export const RaceDetailsScreen = ({ route, navigation }: RaceDetailsScreenProps)
         </View>
 
         <View style={styles.statsRow}>
-          <StatCard label="Track Length" value={`${context.trackLengthKm} km`} helper="Circuit profile" />
-          <StatCard label="Laps" value={context.laps} helper="Scheduled distance" />
-          <StatCard label="Altitude" value={`${context.altitudeM} m`} helper="Venue elevation" />
+          <StatCard label={t("detailsTrackLength")} value={`${context.trackLengthKm} km`} helper={t("detailsCircuitProfile")} />
+          <StatCard label={t("detailsLaps")} value={context.laps} helper={t("detailsScheduledDistance")} />
+          <StatCard label={t("detailsAltitude")} value={`${context.altitudeM} m`} helper={t("detailsVenueElevation")} />
         </View>
 
-        <InfoCard title="Overtake Difficulty" value={context.overtakeDifficulty} />
+        <InfoCard title={t("detailsOvertakeDifficulty")} value={context.overtakeDifficulty} />
 
         <SectionHeader
-          title="Predicted Top-10 Racers"
-          subtitle="Tap a racer row to open full race-context details."
+          title={t("detailsPredictedTop10")}
+          subtitle={t("detailsPredictedSubtitle")}
         />
         <PredictionTop10List
           entries={top10}

@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { fontFamily } from "../constants/theme";
 import type { AppTheme } from "../constants/theme";
+import { useLanguage } from "../i18n/LanguageProvider";
 import { useAppTheme } from "../theme/AppThemeProvider";
 
 type ErrorStateProps = {
@@ -12,15 +13,16 @@ type ErrorStateProps = {
 
 export const ErrorState = ({ message, onRetry }: ErrorStateProps) => {
   const { theme } = useAppTheme();
+  const { t } = useLanguage();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
     <View style={styles.container} testID="error-state">
-      <Text style={styles.title}>Pit Wall Alert</Text>
+      <Text style={styles.title}>{t("errorTitle")}</Text>
       <Text style={styles.message}>{message}</Text>
       {onRetry ? (
         <Pressable style={styles.button} onPress={onRetry}>
-          <Text style={styles.buttonText}>Retry</Text>
+          <Text style={styles.buttonText}>{t("commonRetry")}</Text>
         </Pressable>
       ) : null}
     </View>

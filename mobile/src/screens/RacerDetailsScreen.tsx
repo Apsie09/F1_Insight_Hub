@@ -13,6 +13,7 @@ import { APP_TAB_BAR_HEIGHT } from "../constants/layout";
 import { fontFamily } from "../constants/theme";
 import type { AppTheme } from "../constants/theme";
 import { useAsyncResource } from "../hooks/useAsyncResource";
+import { useLanguage } from "../i18n/LanguageProvider";
 import { predictionService } from "../services/predictionService";
 import { useAppTheme } from "../theme/AppThemeProvider";
 import type { RacerDetailsParams } from "../types/navigation";
@@ -28,6 +29,7 @@ type RacerDetailPayload = {
 
 export const RacerDetailsScreen = ({ route }: RacerDetailsScreenProps) => {
   const { theme } = useAppTheme();
+  const { language, t } = useLanguage();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { racerId, raceId } = route.params;
   const tabBarHeight = APP_TAB_BAR_HEIGHT;
@@ -58,7 +60,7 @@ export const RacerDetailsScreen = ({ route }: RacerDetailsScreenProps) => {
   if (resource.status === "loading" || resource.status === "idle") {
     return (
       <View style={[styles.stateContainer, contentInsets]}>
-        <LoadingState label="Loading racer dossier..." />
+        <LoadingState label={t("racerLoading")} />
       </View>
     );
   }
@@ -66,7 +68,7 @@ export const RacerDetailsScreen = ({ route }: RacerDetailsScreenProps) => {
   if (resource.status === "error") {
     return (
       <View style={[styles.stateContainer, contentInsets]}>
-        <ErrorState message={resource.error ?? "Unable to load racer details."} onRetry={resource.refresh} />
+        <ErrorState message={resource.error ?? t("racerLoadError")} onRetry={resource.refresh} />
       </View>
     );
   }
@@ -75,9 +77,9 @@ export const RacerDetailsScreen = ({ route }: RacerDetailsScreenProps) => {
     return (
       <View style={[styles.stateContainer, contentInsets]}>
         <EmptyState
-          title="No racer data"
-          message="No racer profile was returned for this selection."
-          actionLabel="Retry"
+          title={t("racerEmptyTitle")}
+          message={t("racerEmptyMessage")}
+          actionLabel={t("commonRetry")}
           onAction={resource.refresh}
         />
       </View>
@@ -88,15 +90,27 @@ export const RacerDetailsScreen = ({ route }: RacerDetailsScreenProps) => {
   const { profile, raceContext } = racerDetails;
   const teamMomentum = Number(raceContext.constructorMomentum);
   const momentumLabel =
-    teamMomentum >= 70 ? "Strong" : teamMomentum >= 45 ? "Competitive" : "Low";
+    teamMomentum >= 70 ? t("racerStrong") : teamMomentum >= 45 ? t("racerCompetitive") : t("racerLow");
   const circuitSignal =
     raceContext.avgFinishAtCircuit <= 8
-      ? "positive"
+      ? t("racerPositive")
       : raceContext.avgFinishAtCircuit <= 14
-        ? "neutral"
-        : "risk";
+        ? t("racerNeutral")
+        : t("racerRisk");
   const lastFinishSignal =
-    raceContext.lastFinish <= 10 ? "recent points form" : "recent non-points form";
+    raceContext.lastFinish <= 10 ? t("racerRecentPoints") : t("racerRecentNonPoints");
+  const lastFinishInsight =
+    language === "bg"
+      ? `${t("racerLastFinish")} показва ${lastFinishSignal}, което дава контекст за скорошната база на пилота.`
+      : `Last finish indicates ${lastFinishSignal}, which helps contextualize the driver's recent baseline.`;
+  const circuitInsight =
+    language === "bg"
+      ? `Историята на пистата е ${circuitSignal} сигнал със средно класиране P${raceContext.avgFinishAtCircuit}.`
+      : `Circuit history is a ${circuitSignal} signal with an average finish of P${raceContext.avgFinishAtCircuit}.`;
+  const constructorInsight =
+    language === "bg"
+      ? `Формата на отбора е ${raceContext.constructorMomentum}% и участва като контекст около прогнозния поток.`
+      : `Constructor momentum is ${raceContext.constructorMomentum}%, reflecting team-level form used around the prediction flow.`;
 
   return (
     <ScreenFadeIn>
@@ -113,50 +127,50 @@ export const RacerDetailsScreen = ({ route }: RacerDetailsScreenProps) => {
           <Text style={styles.heroMeta}>{profile.nationality}</Text>
         </View>
 
-        <SectionHeader title="Career Snapshot" subtitle={profile.style} />
+        <SectionHeader title={t("racerCareerSnapshot")} subtitle={profile.style} />
         <View style={styles.statsRow}>
-          <StatCard label="Wins" value={profile.wins} />
-          <StatCard label="Podiums" value={profile.podiums} />
-          <StatCard label="Titles" value={profile.championships} />
-          <StatCard label="Career Points" value={profile.careerPoints} />
+          <StatCard label={t("racerWins")} value={profile.wins} />
+          <StatCard label={t("racerPodiums")} value={profile.podiums} />
+          <StatCard label={t("racerTitles")} value={profile.championships} />
+          <StatCard label={t("racerCareerPoints")} value={profile.careerPoints} />
         </View>
 
         <SectionHeader
-          title="Selected Race Context"
+          title={t("racerSelectedContext")}
           subtitle={`${raceDetails.race.name} (${raceDetails.race.season})`}
         />
-        <InfoCard title="Race Context Note">
+        <InfoCard title={t("racerContextNote")}>
           <Text style={styles.contextCopy}>{raceContext.note}</Text>
         </InfoCard>
 
         <View style={styles.statsRow}>
-          <StatCard label="Last Finish" value={`P${raceContext.lastFinish}`} />
-          <StatCard label="Avg at Circuit" value={raceContext.avgFinishAtCircuit} />
-          <StatCard label="Team Momentum" value={`${raceContext.constructorMomentum}%`} />
+          <StatCard label={t("racerLastFinish")} value={`P${raceContext.lastFinish}`} />
+          <StatCard label={t("racerAvgCircuit")} value={raceContext.avgFinishAtCircuit} />
+          <StatCard label={t("racerTeamMomentum")} value={`${raceContext.constructorMomentum}%`} />
         </View>
 
         <SectionHeader
-          title="Future Prediction Insights"
-          subtitle="Current model-facing signals for this racer and selected race."
+          title={t("racerInsightsTitle")}
+          subtitle={t("racerInsightsSubtitle")}
         />
-        <InfoCard title="Model Signal Summary" value={`${momentumLabel} team momentum`}>
+        <InfoCard title={t("racerSignalSummary")} value={`${momentumLabel} ${t("racerTeamMomentum").toLowerCase()}`}>
           <View style={styles.insightList}>
             <View style={styles.insightRow}>
               <View style={styles.insightDot} />
               <Text style={styles.contextCopy}>
-                Last finish indicates {lastFinishSignal}, which helps contextualize the driver's recent baseline.
+                {lastFinishInsight}
               </Text>
             </View>
             <View style={styles.insightRow}>
               <View style={styles.insightDot} />
               <Text style={styles.contextCopy}>
-                Circuit history is a {circuitSignal} signal with an average finish of P{raceContext.avgFinishAtCircuit}.
+                {circuitInsight}
               </Text>
             </View>
             <View style={styles.insightRow}>
               <View style={styles.insightDot} />
               <Text style={styles.contextCopy}>
-                Constructor momentum is {raceContext.constructorMomentum}%, reflecting team-level form used around the prediction flow.
+                {constructorInsight}
               </Text>
             </View>
           </View>

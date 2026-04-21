@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 
 import type { AppTheme } from "../constants/theme";
+import { useLanguage } from "../i18n/LanguageProvider";
 import { useAppTheme } from "../theme/AppThemeProvider";
 import { SelectMenu } from "./SelectMenu";
 
@@ -13,6 +14,7 @@ type YearChipSelectorProps = {
 
 export const YearChipSelector = ({ years, selectedYear, onSelect }: YearChipSelectorProps) => {
   const { theme } = useAppTheme();
+  const { t } = useLanguage();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const sortedYears = useMemo(
@@ -32,12 +34,12 @@ export const YearChipSelector = ({ years, selectedYear, onSelect }: YearChipSele
     <View style={styles.container}>
       <SelectMenu
         value={selectedYear ? String(selectedYear) : ""}
-        placeholder="Select year"
-        title="Select year"
+        placeholder={t("selectYear")}
+        title={t("selectYear")}
         options={sortedYears.map((year) => ({
           label: String(year),
           value: String(year),
-          helper: year === selectedYear ? "Current selection" : "Season",
+          helper: year === selectedYear ? t("currentSelection") : t("commonSeason"),
         }))}
         onChange={selectYear}
         triggerTestID="year-select-trigger"

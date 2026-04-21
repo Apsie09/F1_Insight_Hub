@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { fontFamily } from "../constants/theme";
 import type { AppTheme } from "../constants/theme";
+import { useLanguage } from "../i18n/LanguageProvider";
 import { useAppTheme } from "../theme/AppThemeProvider";
 import type { Race } from "../types/domain";
 import { formatDate } from "../utils/format";
@@ -14,6 +15,7 @@ type RaceCardProps = {
 
 export const RaceCard = ({ race, onPress }: RaceCardProps) => {
   const { theme } = useAppTheme();
+  const { t } = useLanguage();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
@@ -23,7 +25,7 @@ export const RaceCard = ({ race, onPress }: RaceCardProps) => {
       testID={`race-card-${race.id}`}
     >
       <View style={styles.headerRow}>
-        <Text style={styles.round}>Round {race.round}</Text>
+        <Text style={styles.round}>{t("raceCardRound")} {race.round}</Text>
         <Text style={styles.date}>{formatDate(race.date)}</Text>
       </View>
       <Text style={styles.name}>{race.name}</Text>

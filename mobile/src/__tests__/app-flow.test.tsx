@@ -16,13 +16,14 @@ describe("F1 Insight Hub app flow", () => {
     expect(await screen.findByText("Prediction Calculator")).toBeOnTheScreen();
   });
 
-  it("filters races by selected year chips", async () => {
+  it("filters races by selected year menu", async () => {
     render(<App />);
 
     fireEvent.press(await screen.findByTestId("tab-browse"));
     expect(await screen.findByTestId("race-card-2025-bahrain")).toBeOnTheScreen();
 
-    fireEvent.press(screen.getByTestId("year-chip-2024"));
+    fireEvent.press(screen.getByTestId("year-select-trigger"));
+    fireEvent.press(await screen.findByTestId("year-select-option-2024"));
 
     await waitFor(() => {
       expect(screen.getByTestId("race-card-2024-monaco")).toBeOnTheScreen();

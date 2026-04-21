@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { fontFamily } from "../constants/theme";
 import type { AppTheme } from "../constants/theme";
+import { useLanguage } from "../i18n/LanguageProvider";
 import { useAppTheme } from "../theme/AppThemeProvider";
 import type { Top10PredictionEntry } from "../types/domain";
 import { formatPercent } from "../utils/format";
@@ -14,11 +15,17 @@ type RacerRowCardProps = {
 
 export const RacerRowCard = ({ entry, onPress }: RacerRowCardProps) => {
   const { theme } = useAppTheme();
+  const { t } = useLanguage();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const trendToColor: Record<Top10PredictionEntry["formTrend"], string> = {
     Rising: theme.colors.success,
     Stable: theme.colors.textSecondary,
     Falling: theme.colors.warning,
+  };
+  const trendLabel: Record<Top10PredictionEntry["formTrend"], string> = {
+    Rising: t("trendRising"),
+    Stable: t("trendStable"),
+    Falling: t("trendFalling"),
   };
 
   return (
@@ -37,7 +44,7 @@ export const RacerRowCard = ({ entry, onPress }: RacerRowCardProps) => {
       <View style={styles.metrics}>
         <Text style={styles.probability}>{formatPercent(entry.top10Probability)}</Text>
         <Text style={[styles.formTrend, { color: trendToColor[entry.formTrend] }]}>
-          {entry.formTrend}
+          {trendLabel[entry.formTrend]}
         </Text>
       </View>
     </Pressable>

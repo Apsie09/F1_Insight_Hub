@@ -215,5 +215,3 @@ Generated PDF:
 ```text
 docs/report/build/main.pdf
 ```
-
-Internal planning notes may exist under `docs/`, but the final report is the LaTeX document under `docs/report/`.

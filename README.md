@@ -1,259 +1,197 @@
 # F1 Insight Hub
 
-F1 Insight Hub is a cross-platform Formula 1 application with a React Native mobile app, a FastAPI backend, and an ML feature/prediction pipeline.
+F1 Insight Hub is a team course project for the **Mobile Programming** course. It is a cross-platform Formula 1 application that combines a React Native mobile client, a FastAPI backend, a relational database, and a machine learning pipeline for Top-10 finish probability predictions.
 
-## Architecture Overview
+The project was developed as a complete mobile system rather than as a UI-only prototype. The mobile app communicates with a real backend service, the backend reads from a structured database, and the machine learning component publishes prediction results that are consumed by the application. This makes the project suitable for demonstrating mobile development, API integration, database design, authentication, and applied data science in one coherent system.
 
-- `mobile/`: Expo + React Native + TypeScript client.
-- `backend/`: FastAPI + SQLAlchemy service, DB-first serving.
-- `ml/`: model artifacts and data science pipeline assets.
+## Application Overview
 
-Main runtime flow:
+The application is designed for Formula 1 fans who want to explore historical race data and interact with model-based predictions. A user can create an account, browse seasons and races, inspect race details, view predicted Top-10 probabilities, open driver-level context, and calculate an individual prediction for a selected race and driver.
 
-1. Mobile app calls backend REST API.
-2. Backend reads serving data from SQLite/PostgreSQL.
-3. Prediction calculator uses stored model outputs + lightweight scenario adjustments.
-4. Auth uses DB-backed users, sessions, and notifications tables.
+The mobile experience supports both English and Bulgarian, includes dark and light themes, and uses mobile-specific feedback such as haptic vibration after a prediction result is produced. The interface was tested through Expo Go on a physical iPhone, while web mode is also supported for development and demonstration.
 
-## Repository Layout
+## Visual Overview
+
+The application combines a mobile interface, a backend API, a relational database, and an offline machine learning workflow. The screenshots and diagrams below summarize the main parts of the project.
+
+<p align="center">
+  <img src="docs/report/figures/home_screen.png" alt="F1 Insight Hub mobile home screen" width="260" />
+</p>
+
+<p align="center"><em>Mobile home screen with the main navigation entry points.</em></p>
+
+### System Architecture
+
+The system is organized around a React Native mobile client, a FastAPI backend, PostgreSQL storage, and an offline XGBoost prediction pipeline.
+
+<p align="center">
+  <img src="docs/report/figures/system-architecture.png" alt="F1 Insight Hub system architecture diagram" width="760" />
+</p>
+
+### Database Model
+
+The database separates user/session data, Formula 1 domain entities, race participants, model versions, and published prediction rows.
+
+<p align="center">
+  <img src="docs/report/figures/database-er.png" alt="F1 Insight Hub database ER diagram" width="760" />
+</p>
+
+### XGBoost Prediction Model
+
+The Top-10 prediction component uses an XGBoost ensemble model trained on leakage-safe pre-race features.
+
+<p align="center">
+  <img src="docs/report/figures/XGBoost_diagram.jpg" alt="XGBoost ensemble model diagram" width="640" />
+</p>
+
+## Architecture
+
+F1 Insight Hub follows a layered client-server architecture. The mobile application is responsible for presentation, navigation, local UI state, language selection, theme handling, and communication with the backend API. The backend is responsible for authentication, business logic, database access, and serving prepared prediction data.
+
+The mobile code is organized in a MVVM-like style. Screens and components render the interface, controllers coordinate state and service calls, and services isolate API communication from the UI. Shared state such as authentication, theme, and language is handled through dedicated providers.
+
+The backend follows an MVC-oriented structure under `backend/app/`. Route handlers live in `controllers/`, database entities and query helpers live in `models/`, request and response schemas live in `views/`, business rules live in `domain/`, and shared configuration/helpers live in `core/`. The root `backend/main.py` remains a thin entry point for running the FastAPI app with Uvicorn.
+
+The machine learning workflow is intentionally offline. The model is trained and evaluated in the ML module, then predictions are published into the database. Runtime API requests read prepared prediction rows instead of training or executing heavy ML logic inside the request cycle.
+
+## Repository Structure
 
 ```text
 F1_Insight_Hub/
-  backend/
-  docs/
-  ml/
-  mobile/
-  README.md
+  backend/              FastAPI backend, database models, migrations, ingestion scripts
+  mobile/               Expo + React Native mobile application
+  ml/top10_xgboost/     XGBoost notebook, feature engineering, training utilities
+  docs/report/          Final LaTeX documentation and generated PDF
+  README.md             Project overview and run instructions
 ```
 
-## Database Integration (Python + TypeScript)
+## Main Functionality
 
-The project already uses a shared backend DB serving layer consumed by TypeScript mobile services.
+The final version includes account registration, login, logout, session persistence, password reset, season browsing, race browsing, race details, driver context, Top-10 prediction ranking, and an interactive prediction calculator. The mobile service layer also contains local mock fixtures used for tests and fallback behavior when the backend is unavailable during development.
 
-### Core serving tables
+The backend stores and serves Formula 1 domain data, user sessions, notifications, race participants, model versions, and prediction rows. The database can run with PostgreSQL for the full project setup or SQLite for local development.
 
-- `seasons`
-- `races`
-- `drivers`
-- `constructors`
-- `race_context`
-- `race_participants`
-- `model_versions`
-- `race_predictions`
-- `racer_race_context`
-- `app_users`
-- `app_user_sessions`
-- `app_notifications`
+## Machine Learning Component
 
-### Auth tables
+The production-facing ML task is binary classification: predicting whether a driver will finish in the Top 10. This is a good fit for the application because Formula 1 points finishes are easy to understand for users, can be shown as probabilities, and can be ranked per race.
 
-`app_users` stores:
+The model is based on XGBoost, which is well suited for structured tabular data. Formula 1 race data is naturally tabular: every row can represent a driver in a race, with columns for grid position, qualifying results, circuit metadata, driver/team identifiers, and historical rolling statistics. XGBoost handles mixed feature interactions well and usually performs strongly on this kind of engineered dataset.
 
-- `id`
-- `email` (unique)
-- `display_name`
-- `password_hash` (Argon2)
-- `role`
-- `is_active`
-- `created_at`
-- `updated_at`
+The model uses only pre-race information available after qualifying and before the race. This avoids leakage from same-race outcomes such as final position, points, fastest lap, pit stops, or race events. Historical driver and constructor statistics are shifted so that the current race never contributes to its own prediction.
 
-`app_user_sessions` stores:
+The dataset is based on the Kaggle Formula 1 race data archive by `jtrotman/formula-1-race-data`. The final training workflow uses the modern era from 2006 onward because qualifying information is more complete and more comparable after the introduction of the current qualifying format. The season split is chronological: training uses 2006-2021, validation uses 2022, and testing uses 2023+.
 
-- `id`
-- `user_id`
-- `token_hash`
-- `created_at`
-- `last_used_at`
-- `expires_at`
-- `revoked_at`
 
-`app_notifications` stores:
+## Technologies
 
-- `id`
-- `user_id`
-- `type`
-- `title`
-- `message`
-- `created_at`
-- `read_at`
+Mobile technologies include Expo SDK 54, React Native, TypeScript, React Navigation, Expo Secure Store, Jest, and React Native Testing Library.
 
-## API Endpoints
+Backend technologies include FastAPI, SQLAlchemy, Alembic, PostgreSQL/SQLite, Pydantic, and Argon2 password hashing.
 
-### Health and domain
+The ML stack includes pandas, scikit-learn, XGBoost, joblib, and Jupyter Notebook. The final documentation is written in LaTeX and includes PlantUML diagrams and screenshots from the mobile application.
 
-- `GET /`
-- `GET /seasons`
-- `GET /seasons/{year}/races`
-- `GET /races`
-- `GET /races/featured`
-- `GET /races/{race_id}`
-- `GET /races/{race_id}/participants`
-- `GET /races/{race_id}/predictions/top10`
-- `GET /races/{race_id}/racers/{racer_id}`
-- `GET /racers`
-- `POST /predictions/calculate`
+## Requirements
 
-### Auth
-
-- `POST /auth/register`
-- `POST /auth/login`
-- `GET /auth/me`
-- `POST /auth/logout`
-- `GET /auth/notifications`
-- `POST /auth/notifications/read-all`
-- `POST /auth/password/reset`
-
-## Mobile Login UX (Implemented)
-
-- Full-screen auth overlay appears before app interaction.
-- Modes: `Log In` and `Create Account`.
-- On success, overlay disappears and app unlocks.
-- Session is persisted with `expo-secure-store` (fallback handling included).
-- Backend mode: accounts, sessions, and notifications are stored in DB.
-- Header account menu shows:
-  - account name
-  - notifications
-  - password reset
-  - switch account
-  - log out
-- Test mode: auth gate is bypassed unless `EXPO_PUBLIC_TEST_AUTH_GATE=enabled`.
-
-## Dependencies
-
-## Local project dependencies (required)
-
-These should stay local to each project folder (`backend/`, `mobile/`, `ml/`).
-
-### Mobile (`mobile/package.json`)
-
-Key runtime dependencies:
-
-- `expo ~54.0.33`
-- `react 19.1.0`
-- `react-native 0.81.5`
-- `@react-navigation/*`
-- `expo-font ~14.0.11`
-- `expo-secure-store ~15.0.8`
-- `expo-status-bar ~3.0.9`
-
-Testing/dev dependencies include:
-
-- `jest`
-- `jest-expo ~54.0.17`
-- `@testing-library/react-native`
-- `typescript`
-
-### Backend (`backend/requirements.txt`)
-
-- `fastapi`
-- `uvicorn[standard]`
-- `sqlalchemy`
-- `alembic`
-- `psycopg[binary]`
-- `argon2-cffi`
-- `pandas`
-- `joblib`
-- `scikit-learn`
-- `xgboost`
-
-### ML (`ml/top10_xgboost/requirements.txt`)
-
-Install as needed for model/pipeline workflows.
-
-## Global tooling (optional)
-
-Industry-standard practice is:
-
-- Keep app/runtime dependencies local.
-- Keep only CLI/tooling global if desired.
-
-Global Expo CLI is optional. Current machine has:
-
-- `expo@54.x` or `npx expo` from the local project install.
-
-## Setup and Run
-
-### 1. Prerequisites
+Recommended local setup:
 
 - Node.js 20+
 - npm
 - Python 3.12+
-- PostgreSQL (optional but recommended for DB-first production-like runs)
+- PostgreSQL 16+ for the full database setup
+- Expo Go for physical mobile testing
+- PlantUML and LuaLaTeX for rebuilding the documentation
 
-### 2. Install dependencies
+## Backend Setup
 
-From repo root:
-
-```bash
-# Mobile
-cd mobile
-npm install
-
-# Backend
-cd ../backend
-python -m pip install -r requirements.txt
-
-# ML (optional for serving-only mobile/backend work)
-cd ../ml/top10_xgboost
-python -m pip install -r requirements.txt
-```
-
-### 3. Initialize/migrate backend DB
+Install backend dependencies:
 
 ```bash
 cd backend
+python -m pip install -r requirements.txt
+```
+
+Configure the database connection:
+
+```bash
+export DATABASE_URL="postgresql+psycopg://f1_user:f1_password@localhost:5432/f1_insight_hub"
+export DB_ECHO=false
+```
+
+Initialize or migrate the database schema:
+
+```bash
 python init_db.py
 ```
 
-### 4. Load data and publish predictions (if needed)
+Load Formula 1 archive data and publish prediction rows:
 
 ```bash
 python ingest_archive.py
 python publish_predictions.py
 ```
 
-### 5. Run backend
+Run the backend API:
 
 ```bash
-cd backend
-
-# Example PostgreSQL config
-export DATABASE_URL="postgresql+psycopg://f1_user:<password>@localhost:5432/f1_insight_hub"
-export DB_ECHO=false
-export F1_SERVING_MODE=db
-export F1_ENABLE_LEGACY_FALLBACK=false
-
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### 6. Run mobile app
+## Mobile Setup
+
+Install mobile dependencies:
 
 ```bash
 cd mobile
-
-# Web
-EXPO_PUBLIC_API_BASE_URL=http://127.0.0.1:8000 npx expo start --web --clear
-
-# Android emulator
-EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:8000 npx expo start --android --clear
-
-# Physical device (same Wi-Fi)
-EXPO_PUBLIC_API_BASE_URL=http://<your-laptop-lan-ip>:8000 npx expo start --clear
+npm install
 ```
 
-## First Login Flow
+Run the app in web mode:
 
-1. Launch app.
-2. In auth overlay, choose `Create Account` for first-time user.
-3. Submit display name, email, password.
-4. Overlay closes on success.
-5. Session is persisted locally, so the overlay stays hidden until you use the header `Log out` button (top-right).
-6. Password changes happen from the header account menu and require current password + confirm new password.
+```bash
+EXPO_PUBLIC_API_BASE_URL=http://127.0.0.1:8000 npx expo start --web --clear
+```
+
+Run the app on a physical phone with Expo Go:
+
+```bash
+EXPO_PUBLIC_API_BASE_URL=http://<your-laptop-lan-ip>:8000 npx expo start --host lan --clear
+```
+
+For phone testing, the backend must run on `0.0.0.0`, and the phone must be connected to the same network as the development machine.
+
+Android emulator URL:
+
+```bash
+EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:8000 npx expo start --android --clear
+```
+
+## ML Workflow
+
+Install ML dependencies:
+
+```bash
+cd ml/top10_xgboost
+python -m pip install -r requirements.txt
+```
+
+Open and run the final notebook:
+
+```text
+ml/top10_xgboost/notebooks/01_top10_xgboost.ipynb
+```
+
+The notebook builds the modeling table, trains the model, evaluates it, saves artifacts, explains feature importance, and demonstrates inference for a selected race.
 
 ## Testing
 
-### Mobile
+Backend tests:
+
+```bash
+cd backend
+python -m unittest discover -s tests -p "test_*.py" -v
+```
+
+Mobile type check and tests:
 
 ```bash
 cd mobile
@@ -261,82 +199,21 @@ npx tsc --noEmit
 npm test -- --runInBand
 ```
 
-### Backend
+## Documentation
+
+The final project report is stored under `docs/report/`. It contains the system architecture diagram, user flow diagram, database ER diagram, screenshots, implementation details, ML explanation, testing notes, and individual contribution information.
+
+Build the LaTeX report:
 
 ```bash
-cd backend
-python -m unittest discover -s tests -p "test_*.py" -v
+cd docs/report
+make
 ```
 
-## Troubleshooting
+Generated PDF:
 
-### `Failed to fetch` in app
-
-Usually backend is not reachable from the selected platform host.
-
-- Web/iOS simulator: use `127.0.0.1`.
-- Android emulator: use `10.0.2.2`.
-- Physical device: use machine LAN IP and `--host 0.0.0.0` on backend.
-
-### App shows empty seasons/races after login
-
-If backend auth works but race feeds are empty/unseeded, the mobile app now auto-falls back to local fixtures for race browsing/prediction UI.
-
-- This keeps the app usable while backend data ingestion is still pending.
-- To force strict API-only behavior (disable fallback), set:
-
-```bash
-EXPO_PUBLIC_DISABLE_MOCK_FALLBACK=true
+```text
+docs/report/build/main.pdf
 ```
 
-### Login form does not appear
-
-The login overlay only shows while signed out.
-
-- If you already authenticated once, use the top-right header `Log out` button to reopen it.
-
-### Password reset fails
-
-The current password reset flow is authenticated only.
-
-- open the account menu
-- enter current password
-- enter new password
-- confirm the new password
-- submit
-
-If the current password is wrong, the backend returns a `400` error with a clear message.
-- On web, you can also clear local storage key `f1_insight_hub_auth_session`.
-
-### Backend returns empty lists
-
-Current local DB can be initialized but still empty for race feeds until data is ingested.
-
-```bash
-cd backend
-python init_db.py
-python ingest_archive.py
-python publish_predictions.py
-```
-
-If you intentionally run strict API mode and backend is empty, mobile will now show an explicit endpoint error.
-
-### Expo compatibility warning
-
-Run:
-
-```bash
-cd mobile
-npx expo install --check
-```
-
-If mismatches are reported, run `npx expo install <package>` for the listed packages.
-
-## Notes for Backend Developer
-
-- Mobile auth integration expects:
-  - `POST /auth/register` returning `{ token, user }`
-  - `POST /auth/login` returning `{ token, user }`
-- Passwords are expected to be securely hashed server-side (currently Argon2).
-- `token` is currently a lightweight session token placeholder for frontend gating and can be replaced with JWT + refresh strategy later.
-- Existing race/prediction endpoints remain unchanged.
+Internal planning notes may exist under `docs/`, but the final report is the LaTeX document under `docs/report/`.

@@ -32,3 +32,8 @@ mobile/node_modules/
 # Runtime logs
 backend/*.log
 mobile/*.log
+
+# Local/internal documentation drafts
+docs/DATABASE_DESIGN.md
+docs/PROJECT_STATUS.md
+docs/frontend-documentation.md

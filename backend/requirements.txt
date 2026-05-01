@@ -1,0 +1,11 @@
+argon2-cffi
+fastapi
+uvicorn[standard]
+pandas
+pyarrow
+joblib
+scikit-learn
+xgboost
+sqlalchemy
+alembic
+psycopg[binary]

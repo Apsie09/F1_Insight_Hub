@@ -1,0 +1,7 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Component smoke snapshots renders RaceCard 1`] = `null`;
+
+exports[`Component smoke snapshots renders RacerRowCard 1`] = `null`;
+
+exports[`Component smoke snapshots renders StatCard 1`] = `null`;

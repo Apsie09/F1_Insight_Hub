@@ -1,0 +1,74 @@
+@startuml system-architecture
+title Обща архитектура на F1 Insight Hub
+
+skinparam backgroundColor transparent
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontSize 14
+skinparam ArrowColor #D20E2A
+skinparam ArrowThickness 1.4
+skinparam component {
+  BackgroundColor #F3F5F8
+  BorderColor #121724
+  FontColor #121724
+}
+skinparam database {
+  BackgroundColor #F3F5F8
+  BorderColor #121724
+  FontColor #121724
+}
+
+actor "User" as user
+
+package "Mobile App\nReact Native + Expo" as mobile {
+  [Screens / Views] as mobile_views
+  [Controllers] as mobile_controllers
+  [Services\nAPI client + local fallback] as mobile_services
+  [Auth / Theme / Language\nstate providers] as mobile_state
+}
+
+package "FastAPI Backend" as backend {
+  [main.py\nentrypoint] as backend_entry
+  [controllers] as backend_controllers
+  [domain] as backend_domain
+  [models] as backend_models
+  [views] as backend_views
+  [core] as backend_core
+}
+
+database "PostgreSQL / SQLite\napplication database" as db
+folder "Formula 1 CSV archive\nKaggle dataset" as csv
+rectangle "Batch jobs\ningest_archive.py\npublish_predictions.py" as jobs
+rectangle "Offline ML pipeline\nXGBoost Top-10 model" as ml
+
+user --> mobile_views : UI interaction
+mobile_views --> mobile_controllers : view state
+mobile_controllers --> mobile_services : API calls
+mobile_services --> backend_entry : HTTPS/REST requests
+mobile_state ..> mobile_views : shared UI state
+
+backend_entry --> backend_controllers : router dispatch
+backend_controllers --> backend_domain : business rules
+backend_domain --> backend_models : entities / queries
+backend_domain --> backend_views : DTO mapping
+backend_models --> db : SQLAlchemy
+backend_core ..> backend_controllers : config / helpers
+backend_core ..> backend_domain : shared utilities
+
+csv --> jobs : historical race data
+ml --> jobs : model artifact\nand feature schema
+jobs --> db : seasons, races,\nparticipants,\npredictions
+
+note bottom of ml
+  Training is offline.
+  Online API requests read already
+  published prediction rows from DB.
+end note
+
+note right of mobile_services
+  Local mock services remain for
+  tests and fallback when the API
+  is unavailable.
+end note
+@enduml

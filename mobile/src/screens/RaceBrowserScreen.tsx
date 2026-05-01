@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -11,9 +11,8 @@ import { SectionHeader } from "../components/SectionHeader";
 import { YearChipSelector } from "../components/YearChipSelector";
 import { APP_TAB_BAR_HEIGHT } from "../constants/layout";
 import type { AppTheme } from "../constants/theme";
-import { useAsyncResource } from "../hooks/useAsyncResource";
+import { useRaceBrowserController } from "../controllers/useRaceBrowserController";
 import { useLanguage } from "../i18n/LanguageProvider";
-import { predictionService } from "../services/predictionService";
 import { useAppTheme } from "../theme/AppThemeProvider";
 import type { BrowseStackParamList } from "../types/navigation";
 
@@ -23,7 +22,14 @@ export const RaceBrowserScreen = ({ navigation }: RaceBrowserScreenProps) => {
   const { theme } = useAppTheme();
   const { t } = useLanguage();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const [selectedYear, setSelectedYear] = useState<number>(0);
+  const {
+    selectedYear,
+    setSelectedYear,
+    seasonsResource,
+    racesResource,
+    title,
+    openRaceDetails,
+  } = useRaceBrowserController(navigation, t("browseCalendarSuffix"), t("browseDefaultTitle"));
   const tabBarHeight = APP_TAB_BAR_HEIGHT;
   const insets = useSafeAreaInsets();
 
@@ -41,38 +47,6 @@ export const RaceBrowserScreen = ({ navigation }: RaceBrowserScreenProps) => {
     }),
     [insets.bottom, tabBarHeight]
   );
-
-  const fetchSeasons = useCallback(() => predictionService.getSeasons(), []);
-  const seasonsResource = useAsyncResource(fetchSeasons, {
-    isEmpty: (value) => value.length === 0,
-  });
-
-  useEffect(() => {
-    if (!selectedYear && seasonsResource.data?.length) {
-      setSelectedYear(seasonsResource.data[0].year);
-    }
-  }, [selectedYear, seasonsResource.data]);
-
-  const fetchRaces = useCallback(() => {
-    if (!selectedYear) {
-      return Promise.resolve([]);
-    }
-    return predictionService.getRacesBySeason(selectedYear);
-  }, [selectedYear]);
-
-  const racesResource = useAsyncResource(fetchRaces, {
-    immediate: Boolean(selectedYear),
-    dependencies: [selectedYear],
-    isEmpty: (value) => value.length === 0,
-  });
-
-  const title = useMemo(() => {
-    if (!selectedYear) {
-      return t("browseDefaultTitle");
-    }
-
-    return `${selectedYear} ${t("browseCalendarSuffix")}`;
-  }, [selectedYear, t]);
 
   const renderBody = () => {
     if (seasonsResource.status === "loading" || seasonsResource.status === "idle") {
@@ -136,12 +110,7 @@ export const RaceBrowserScreen = ({ navigation }: RaceBrowserScreenProps) => {
         renderItem={({ item }) => (
           <RaceCard
             race={item}
-            onPress={(race) =>
-              navigation.navigate("RaceDetails", {
-                raceId: race.id,
-                season: race.season,
-              })
-            }
+            onPress={openRaceDetails}
           />
         )}
         ItemSeparatorComponent={() => <View style={{ height: theme.spacing.sm }} />}

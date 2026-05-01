@@ -8,10 +8,10 @@ import joblib
 import pandas as pd
 from sqlalchemy import select
 
-from config import ARCHIVE_DIR, CSV_NA_VALUES, FEATURE_DF_PATH, TOP10_METADATA_PATH, TOP10_PIPELINE_PATH
-from database import SessionLocal
-from helpers import confidence_label, prediction_support_label, racer_note, recent_form_score
-from models import Constructor, Driver, ModelVersion, Race, RaceParticipant, RacePrediction, RacerRaceContextRecord
+from app.core.config import ARCHIVE_DIR, CSV_NA_VALUES, FEATURE_DF_PATH, TOP10_METADATA_PATH, TOP10_PIPELINE_PATH
+from app.models.database import SessionLocal
+from app.core.helpers import confidence_label, prediction_support_label, racer_note, recent_form_score
+from app.models.entities import Constructor, Driver, ModelVersion, Race, RaceParticipant, RacePrediction, RacerRaceContextRecord
 
 
 def load_required_inputs() -> tuple[pd.DataFrame, dict[str, Any], Any, pd.DataFrame, pd.DataFrame, pd.DataFrame]:

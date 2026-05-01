@@ -6,9 +6,9 @@ from typing import Any
 
 import pandas as pd
 
-from config import ARCHIVE_DIR, CSV_NA_VALUES, FEATURED_RACE_LIMIT, TOP10_METADATA_PATH
-from database import SessionLocal
-from helpers import (
+from app.core.config import ARCHIVE_DIR, CSV_NA_VALUES, FEATURED_RACE_LIMIT, TOP10_METADATA_PATH
+from app.models.database import SessionLocal
+from app.core.helpers import (
     estimated_laps,
     overtake_difficulty,
     prediction_support_label,
@@ -18,7 +18,7 @@ from helpers import (
     track_length_km,
     weather_for_country,
 )
-from models import Constructor, Driver, Race, RaceContext, Season
+from app.models.entities import Constructor, Driver, Race, RaceContext, Season
 
 
 def load_archive_tables() -> dict[str, pd.DataFrame]:

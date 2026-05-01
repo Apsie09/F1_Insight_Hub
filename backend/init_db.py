@@ -6,7 +6,7 @@ from alembic import command
 from alembic.config import Config
 from sqlalchemy import inspect
 
-from database import DATABASE_URL, engine
+from app.models.database import DATABASE_URL, engine
 
 
 BACKEND_DIR = Path(__file__).resolve().parent

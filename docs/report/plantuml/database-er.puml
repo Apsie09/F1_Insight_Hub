@@ -1,0 +1,128 @@
+@startuml database-er
+title Опростена ER диаграма на основните таблици
+
+skinparam backgroundColor transparent
+skinparam shadowing false
+skinparam linetype ortho
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontSize 13
+skinparam entity {
+  BackgroundColor #F3F5F8
+  BorderColor #121724
+  FontColor #121724
+}
+skinparam ArrowColor #D20E2A
+skinparam ArrowThickness 1.2
+
+entity "app_users" as app_users {
+  * id : int
+  --
+  email : string
+  display_name : string
+  password_hash : string
+}
+
+entity "app_user_sessions" as sessions {
+  * id : int
+  --
+  user_id : int
+  token_hash : string
+  expires_at : datetime
+}
+
+entity "app_notifications" as notifications {
+  * id : int
+  --
+  user_id : int
+  title : string
+  body : text
+  read_at : datetime
+}
+
+entity "seasons" as seasons {
+  * year : int
+}
+
+entity "races" as races {
+  * race_id : int
+  --
+  year : int
+  round : int
+  name : string
+  circuit_id : int
+}
+
+entity "race_context" as race_context {
+  * race_id : int
+  --
+  circuit_name : string
+  country : string
+  date : date
+}
+
+entity "drivers" as drivers {
+  * driver_id : int
+  --
+  full_name : string
+  nationality : string
+}
+
+entity "constructors" as constructors {
+  * constructor_id : int
+  --
+  name : string
+  nationality : string
+}
+
+entity "model_versions" as versions {
+  * id : int
+  --
+  version : string
+  model_type : string
+  created_at : datetime
+}
+
+entity "race_participants" as participants {
+  * id : int
+  --
+  race_id : int
+  driver_id : int
+  constructor_id : int
+  grid : int
+}
+
+entity "race_predictions" as predictions {
+  * id : int
+  --
+  race_id : int
+  driver_id : int
+  constructor_id : int
+  model_version_id : int
+  top10_probability : float
+}
+
+entity "racer_race_context" as racer_context {
+  * id : int
+  --
+  race_id : int
+  driver_id : int
+  narrative : text
+}
+
+app_users ||--o{ sessions
+app_users ||--o{ notifications
+
+seasons ||--o{ races
+races ||--|| race_context
+races ||--o{ participants
+races ||--o{ predictions
+races ||--o{ racer_context
+
+drivers ||--o{ participants
+drivers ||--o{ predictions
+drivers ||--o{ racer_context
+
+constructors ||--o{ participants
+constructors ||--o{ predictions
+versions ||--o{ predictions
+@enduml

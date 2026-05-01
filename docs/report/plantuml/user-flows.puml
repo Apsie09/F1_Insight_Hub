@@ -1,0 +1,39 @@
+@startuml user-flows
+title Основни потребителски потоци
+
+skinparam backgroundColor transparent
+skinparam shadowing false
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontSize 14
+skinparam activity {
+  BackgroundColor #F3F5F8
+  BorderColor #121724
+  FontColor #121724
+  DiamondBackgroundColor #F3F5F8
+  DiamondBorderColor #D20E2A
+}
+skinparam ArrowColor #D20E2A
+skinparam ArrowThickness 1.4
+
+start
+:Вход или регистрация;
+:Home screen;
+
+if (Основно действие?) then (Browse)
+  :Избор на сезон;
+  :Избор на състезание;
+  :Race Details;
+  :Преглед на Top-10 прогнози;
+  if (Избран пилот?) then (Да)
+    :Racer Intelligence;
+    :Контекст за пилота и избраното състезание;
+  endif
+else (Prediction)
+  :Prediction Calculator;
+  :Избор на състезание и пилот;
+  :Изчисляване на Top-10 вероятност;
+  :Показване на confidence и reasoning;
+endif
+
+stop
+@enduml

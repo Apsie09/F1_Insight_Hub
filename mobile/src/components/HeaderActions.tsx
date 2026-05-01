@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   Modal,
   Pressable,
@@ -12,29 +12,13 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useAuth } from "../auth/AuthProvider";
 import type { AppTheme } from "../constants/theme";
 import { fontFamily } from "../constants/theme";
+import { formatTimestamp, getInitials, useAccountMenuController } from "../controllers/useAccountMenuController";
 import { useLanguage } from "../i18n/LanguageProvider";
 import { useAppTheme } from "../theme/AppThemeProvider";
 import { DataSourceBadge } from "./DataSourceBadge";
 import { ThemeSwitch } from "./ThemeSwitch";
-
-const getInitials = (displayName: string): string =>
-  displayName
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("") || "U";
-
-const formatTimestamp = (value: string): string => {
-  const timestamp = Date.parse(value);
-  if (Number.isNaN(timestamp)) {
-    return value;
-  }
-  return new Date(timestamp).toLocaleString();
-};
 
 type HeaderActionsProps = {
   showTheme?: boolean;
@@ -60,70 +44,25 @@ export const HeaderActions = ({
     user,
     notifications,
     unreadNotificationCount,
-    signOut,
-    switchAccount,
-    resetPassword,
-    markNotificationsRead,
     isSubmitting,
     error,
-    clearError,
-  } = useAuth();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [passwordPanelOpen, setPasswordPanelOpen] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmNewPassword, setConfirmNewPassword] = useState("");
-  const [localMessage, setLocalMessage] = useState<string | null>(null);
-
-  const closeMenu = useCallback(() => {
-    setMenuOpen(false);
-    setPasswordPanelOpen(false);
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmNewPassword("");
-    setLocalMessage(null);
-    clearError();
-  }, [clearError]);
-
-  const handleSignOut = useCallback(async () => {
-    closeMenu();
-    await signOut();
-  }, [closeMenu, signOut]);
-
-  const handleSwitchAccount = useCallback(async () => {
-    closeMenu();
-    await switchAccount();
-  }, [closeMenu, switchAccount]);
-
-  const handleResetPassword = useCallback(async () => {
-    if (newPassword.length < 8) {
-      setLocalMessage(t("accountNewPasswordShort"));
-      return;
-    }
-    if (confirmNewPassword !== newPassword) {
-      setLocalMessage(t("accountNewPasswordsMismatch"));
-      return;
-    }
-    const ok = await resetPassword({
-      currentPassword,
-      newPassword,
-    });
-    if (ok) {
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmNewPassword("");
-      setPasswordPanelOpen(false);
-      setLocalMessage(t("accountPasswordUpdated"));
-    }
-  }, [confirmNewPassword, currentPassword, newPassword, resetPassword, t]);
-
-  const handleMarkNotificationsRead = useCallback(async () => {
-    await markNotificationsRead();
-  }, [markNotificationsRead]);
-
-  const toggleMenu = useCallback(() => {
-    setMenuOpen((current) => !current);
-  }, []);
+    menuOpen,
+    passwordPanelOpen,
+    currentPassword,
+    newPassword,
+    confirmNewPassword,
+    localMessage,
+    closeMenu,
+    handleSignOut,
+    handleSwitchAccount,
+    handleResetPassword,
+    handleMarkNotificationsRead,
+    toggleMenu,
+    togglePasswordPanel,
+    setCurrentPassword,
+    setNewPassword,
+    setConfirmNewPassword,
+  } = useAccountMenuController();
 
   const shouldShowDataSource = showDataSource && !compactMode;
 
@@ -253,11 +192,7 @@ export const HeaderActions = ({
 
               <View style={styles.section}>
                 <Pressable
-                  onPress={() => {
-                    setPasswordPanelOpen((current) => !current);
-                    setLocalMessage(null);
-                    clearError();
-                  }}
+                  onPress={togglePasswordPanel}
                   style={({ pressed }) => [styles.menuAction, pressed && styles.menuActionPressed]}
                   testID="header-password-toggle-button"
                 >

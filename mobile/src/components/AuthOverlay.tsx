@@ -14,27 +14,34 @@ import {
   View,
 } from "react-native";
 
-import { useAuth } from "../auth/AuthProvider";
 import { fontFamily } from "../constants/theme";
 import type { AppTheme } from "../constants/theme";
+import { useAuthOverlayController } from "../controllers/useAuthOverlayController";
 import { useLanguage } from "../i18n/LanguageProvider";
 import { useAppTheme } from "../theme/AppThemeProvider";
-import type { AuthMode } from "../types/auth";
-
-const isValidEmail = (email: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim().toLowerCase());
 
 export const AuthOverlay = () => {
   const { theme } = useAppTheme();
   const { t } = useLanguage();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const { status, login, register, isSubmitting, error, clearError } = useAuth();
-
-  const [mode, setMode] = useState<AuthMode>("login");
-  const [displayName, setDisplayName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [validationMessage, setValidationMessage] = useState<string | null>(null);
+  const {
+    status,
+    mode,
+    displayName,
+    email,
+    password,
+    confirmPassword,
+    validationMessage,
+    isSubmitting,
+    error,
+    submitLabel,
+    setDisplayName,
+    setEmail,
+    setPassword,
+    setConfirmPassword,
+    switchMode,
+    submit,
+  } = useAuthOverlayController();
   const [modeTrackWidth, setModeTrackWidth] = useState(0);
 
   const entranceProgress = useRef(new Animated.Value(0)).current;
@@ -71,51 +78,6 @@ export const AuthOverlay = () => {
     return null;
   }
 
-  const switchMode = (nextMode: AuthMode) => {
-    setMode(nextMode);
-    setValidationMessage(null);
-    clearError();
-  };
-
-  const submit = async () => {
-    const normalizedEmail = email.trim().toLowerCase();
-    const trimmedName = displayName.trim();
-
-    if (!isValidEmail(normalizedEmail)) {
-      setValidationMessage(t("authInvalidEmail"));
-      return;
-    }
-
-    if (password.length < 8) {
-      setValidationMessage(t("authPasswordShort"));
-      return;
-    }
-
-    if (mode === "register" && confirmPassword !== password) {
-      setValidationMessage(t("authPasswordsMismatch"));
-      return;
-    }
-
-    if (mode === "register" && !trimmedName) {
-      setValidationMessage(t("authMissingName"));
-      return;
-    }
-
-    setValidationMessage(null);
-    clearError();
-
-    if (mode === "login") {
-      await login({ email: normalizedEmail, password });
-      return;
-    }
-
-    await register({
-      displayName: trimmedName,
-      email: normalizedEmail,
-      password,
-    });
-  };
-
   const onModeTrackLayout = (event: LayoutChangeEvent) => {
     setModeTrackWidth(event.nativeEvent.layout.width);
   };
@@ -148,8 +110,6 @@ export const AuthOverlay = () => {
     inputRange: [0, 1],
     outputRange: [0, 86],
   });
-
-  const submitLabel = mode === "login" ? t("authLogin") : t("authCreateAccount");
 
   return (
     <View style={styles.overlayRoot} testID="auth-overlay">

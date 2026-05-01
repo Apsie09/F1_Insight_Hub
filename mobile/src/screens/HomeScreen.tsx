@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -11,18 +11,12 @@ import { SectionHeader } from "../components/SectionHeader";
 import { APP_TAB_BAR_HEIGHT } from "../constants/layout";
 import { fontFamily } from "../constants/theme";
 import type { AppTheme } from "../constants/theme";
-import { useAsyncResource } from "../hooks/useAsyncResource";
+import { useHomeController } from "../controllers/useHomeController";
 import { useLanguage } from "../i18n/LanguageProvider";
-import { predictionService } from "../services/predictionService";
 import { useAppTheme } from "../theme/AppThemeProvider";
 import type { HomeStackParamList } from "../types/navigation";
 
 type HomeScreenProps = NativeStackScreenProps<HomeStackParamList, "Home">;
-
-type HomePayload = {
-  seasons: Awaited<ReturnType<typeof predictionService.getSeasons>>;
-  featuredRaces: Awaited<ReturnType<typeof predictionService.getFeaturedRaces>>;
-};
 
 export const HomeScreen = ({ navigation }: HomeScreenProps) => {
   const { theme } = useAppTheme();
@@ -42,24 +36,7 @@ export const HomeScreen = ({ navigation }: HomeScreenProps) => {
     [insets.bottom, insets.left, insets.right, tabBarHeight]
   );
 
-  const fetchHome = useCallback<() => Promise<HomePayload>>(async () => {
-    const [seasonData, featuredRaceData] = await Promise.all([
-      predictionService.getSeasons(),
-      predictionService.getFeaturedRaces(),
-    ]);
-
-    return {
-      seasons: seasonData,
-      featuredRaces: featuredRaceData,
-    };
-  }, []);
-
-  const homeResource = useAsyncResource(fetchHome, {
-    isEmpty: (value) => value.seasons.length === 0,
-  });
-
-  const openBrowse = () => navigation.getParent()?.navigate("BrowseTab" as never);
-  const openPrediction = () => navigation.getParent()?.navigate("PredictionTab" as never);
+  const { homeResource, openBrowse, openPrediction, openRaceDetails } = useHomeController(navigation);
 
   const renderBody = () => {
     if (homeResource.status === "loading" || homeResource.status === "idle") {
@@ -126,12 +103,7 @@ export const HomeScreen = ({ navigation }: HomeScreenProps) => {
             <RaceCard
               key={race.id}
               race={race}
-              onPress={(selectedRace) =>
-                navigation.navigate("RaceDetails", {
-                  raceId: selectedRace.id,
-                  season: selectedRace.season,
-                })
-              }
+              onPress={openRaceDetails}
             />
           ))}
         </View>

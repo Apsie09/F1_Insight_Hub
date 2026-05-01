@@ -15,8 +15,8 @@ os.environ["F1_ENABLE_LEGACY_FALLBACK"] = "false"
 
 import init_db  # noqa: E402
 import main  # noqa: E402
-from database import SessionLocal  # noqa: E402
-from models import AppNotification, AppUser  # noqa: E402
+from app.models.database import SessionLocal  # noqa: E402
+from app.models.entities import AppNotification, AppUser  # noqa: E402
 
 
 class AuthApiTests(unittest.TestCase):

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   Animated,
   Easing,
@@ -8,7 +8,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  Vibration,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -22,29 +21,12 @@ import { SectionHeader } from "../components/SectionHeader";
 import { APP_TAB_BAR_HEIGHT } from "../constants/layout";
 import { fontFamily } from "../constants/theme";
 import type { AppTheme } from "../constants/theme";
-import { useAsyncResource } from "../hooks/useAsyncResource";
+import { MODEL_PRESENTATION_DELAY_MS, usePredictionController } from "../controllers/usePredictionController";
 import { useLanguage } from "../i18n/LanguageProvider";
-import { predictionService } from "../services/predictionService";
 import { useAppTheme } from "../theme/AppThemeProvider";
-import type { CalculatorInput, CalculatorResult, RacerProfile } from "../types/domain";
 import { formatPercent } from "../utils/format";
 
-type PredictionPayload = {
-  seasons: Awaited<ReturnType<typeof predictionService.getSeasons>>;
-  races: Awaited<ReturnType<typeof predictionService.getAllRaces>>;
-};
-
-const MODEL_PRESENTATION_DELAY_MS = process.env.NODE_ENV === "test" ? 0 : 5000;
 const loadingTire = require("../../assets/loading_tire.png");
-
-const wait = (durationMs: number): Promise<void> =>
-  new Promise((resolve) => {
-    setTimeout(resolve, durationMs);
-  });
-
-const notifyPredictionComplete = () => {
-  Vibration.vibrate(Platform.OS === "ios" ? 80 : [0, 60, 40, 80]);
-};
 
 const PredictionLoadingCard = () => {
   const { theme } = useAppTheme();
@@ -141,12 +123,17 @@ export const PredictionScreen = () => {
   const { theme } = useAppTheme();
   const { t } = useLanguage();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const [submitPending, setSubmitPending] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [result, setResult] = useState<CalculatorResult | null>(null);
-  const [availableRacers, setAvailableRacers] = useState<RacerProfile[]>([]);
-  const [racersLoading, setRacersLoading] = useState(false);
-  const [racerLoadError, setRacerLoadError] = useState<string | null>(null);
+  const {
+    resource,
+    submitPending,
+    submitError,
+    result,
+    availableRacers,
+    racersLoading,
+    racerLoadError,
+    handleSubmit,
+    handleRaceChange,
+  } = usePredictionController();
   const tabBarHeight = APP_TAB_BAR_HEIGHT;
   const insets = useSafeAreaInsets();
 
@@ -157,62 +144,6 @@ export const PredictionScreen = () => {
       paddingBottom: tabBarHeight + insets.bottom + theme.spacing.lg,
     }),
     [insets.bottom, insets.left, insets.right, tabBarHeight]
-  );
-
-  const fetchPayload = useCallback(async (): Promise<PredictionPayload> => {
-    const [seasonData, raceData] = await Promise.all([
-      predictionService.getSeasons(),
-      predictionService.getAllRaces(),
-    ]);
-    return { seasons: seasonData, races: raceData };
-  }, []);
-
-  const resource = useAsyncResource(fetchPayload, {
-    isEmpty: (value) => value.seasons.length === 0 || value.races.length === 0,
-  });
-
-  const handleSubmit = async (input: CalculatorInput) => {
-    setSubmitPending(true);
-    setSubmitError(null);
-    setResult(null);
-    try {
-      const [response] = await Promise.all([
-        predictionService.calculatePrediction(input),
-        wait(MODEL_PRESENTATION_DELAY_MS),
-      ]);
-      setResult(response);
-      notifyPredictionComplete();
-    } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : t("calcRequestFailed"));
-      setResult(null);
-    } finally {
-      setSubmitPending(false);
-    }
-  };
-
-  const handleRaceChange = useCallback(
-    async (raceId: string) => {
-      setResult(null);
-      setSubmitError(null);
-      setRacerLoadError(null);
-
-      if (!raceId) {
-        setAvailableRacers([]);
-        return;
-      }
-
-      setRacersLoading(true);
-      try {
-        const participants = await predictionService.getRaceParticipants(raceId);
-        setAvailableRacers(participants);
-      } catch (error) {
-        setAvailableRacers([]);
-        setRacerLoadError(error instanceof Error ? error.message : t("calcRacersLoadFailed"));
-      } finally {
-        setRacersLoading(false);
-      }
-    },
-    []
   );
 
   if (resource.status === "loading" || resource.status === "idle") {

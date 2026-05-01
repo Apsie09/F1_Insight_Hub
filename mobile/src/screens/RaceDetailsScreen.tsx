@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -13,9 +13,8 @@ import { StatCard } from "../components/StatCard";
 import { APP_TAB_BAR_HEIGHT } from "../constants/layout";
 import { fontFamily } from "../constants/theme";
 import type { AppTheme } from "../constants/theme";
-import { useAsyncResource } from "../hooks/useAsyncResource";
+import { useRaceDetailsController } from "../controllers/useRaceDetailsController";
 import { useLanguage } from "../i18n/LanguageProvider";
-import { predictionService } from "../services/predictionService";
 import { useAppTheme } from "../theme/AppThemeProvider";
 import type { RaceDetailsParams } from "../types/navigation";
 import { formatDate } from "../utils/format";
@@ -27,16 +26,11 @@ type RaceDetailsScreenProps = {
   };
 };
 
-type RaceDetailPayload = {
-  details: Awaited<ReturnType<typeof predictionService.getRaceDetails>>;
-  top10: Awaited<ReturnType<typeof predictionService.getTop10Prediction>>;
-};
-
 export const RaceDetailsScreen = ({ route, navigation }: RaceDetailsScreenProps) => {
   const { theme } = useAppTheme();
   const { t } = useLanguage();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const { raceId } = route.params;
+  const { resource, openRacerDetails } = useRaceDetailsController(route.params, navigation);
   const tabBarHeight = APP_TAB_BAR_HEIGHT;
   const insets = useSafeAreaInsets();
 
@@ -48,20 +42,6 @@ export const RaceDetailsScreen = ({ route, navigation }: RaceDetailsScreenProps)
     }),
     [insets.bottom, insets.left, insets.right, tabBarHeight]
   );
-
-  const fetchRaceDetailPayload = useCallback(async (): Promise<RaceDetailPayload> => {
-    const [details, top10] = await Promise.all([
-      predictionService.getRaceDetails(raceId),
-      predictionService.getTop10Prediction(raceId),
-    ]);
-
-    return { details, top10 };
-  }, [raceId]);
-
-  const resource = useAsyncResource(fetchRaceDetailPayload, {
-    dependencies: [raceId],
-    isEmpty: (value) => value.top10.length === 0,
-  });
 
   if (resource.status === "loading" || resource.status === "idle") {
     return (
@@ -126,12 +106,7 @@ export const RaceDetailsScreen = ({ route, navigation }: RaceDetailsScreenProps)
         />
         <PredictionTop10List
           entries={top10}
-          onSelectRacer={(entry) =>
-            navigation.navigate("RacerDetails", {
-              racerId: entry.racerId,
-              raceId: race.id,
-            })
-          }
+          onSelectRacer={openRacerDetails}
         />
       </ScrollView>
     </ScreenFadeIn>
